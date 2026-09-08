@@ -1,0 +1,38 @@
+# -- bundled runtime (too large / redistribute-your-own) --------------------
+jre/
+
+# -- python -------------------------------------------------------------------
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+
+# -- generated run output (sas-doc-gen) ----------------------------------------
+out/
+out2/
+out3/
+out4/
+out5/
+out6/
+out_real/
+demo_out/
+catalog/
+demo_catalog/
+
+# -- generated run output (seasug-paper) ---------------------------------------
+seasug-paper/data/
+seasug-paper/adapters/
+seasug-paper/scripts/preds_base.jsonl
+seasug-paper/scripts/preds_tuned.jsonl
+seasug-paper/scripts/oda_metadata.json
+
+# -- credentials / local machine config, never commit --------------------------
+.authinfo
+*.pem
+*.key
+.env
+
+# -- editor / OS cruft ----------------------------------------------------------
+.DS_Store
+*.swp
