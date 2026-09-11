@@ -1,0 +1,118 @@
+{
+  "program_name": "prog914_hhold.sas",
+  "program_summary": {
+    "description": "Builds an analysis-ready file at the surveyed household level for a single reference period, by merging raw collected microdata with a control file, applying a retention filter, and writing the result to a caller-specified library; also aggregates totals by region_code for review.",
+    "input_datasets": [
+      "WORK.D1",
+      "WORK.D2"
+    ],
+    "output_datasets": [
+      "WORK.O1",
+      "WORK.AGG1"
+    ]
+  },
+  "macro_reference": [
+    {
+      "name": "prcstep9",
+      "positional_params": [
+        "p"
+      ],
+      "keyword_params": [
+        {
+          "name": "lb",
+          "default": "work"
+        },
+        {
+          "name": "thr",
+          "default": "0"
+        }
+      ],
+      "purpose": "Merges D1 and D2 to produce O1 for reference period `p`, applying a 4-step pipeline (sort/merge, summarize, transpose, derive).",
+      "called_by": [
+        "prog914_hhold.sas"
+      ]
+    }
+  ],
+  "variable_dictionary": [
+    {
+      "name": "HHID",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 10,
+      "label": "Household identifier",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "RGN",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 1,
+      "label": "Census region code",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "IMTH",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 6,
+      "label": "Interview month YYYYMM",
+      "derivation": "carried through from the input file when populated; if blank, backfilled from the &dt macro variable set at the top of the program."
+    },
+    {
+      "name": "NPER",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Count of persons in household",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "PWGT",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Person-level weight",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "LFST",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 2,
+      "label": "Labor force status code",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "NPERR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Count of persons in household expressed as a rate per 100 units",
+      "derivation": "computed as round(100*NPER/NPER, 0.01) when NPER > 0, else set to missing."
+    },
+    {
+      "name": "RGN",
+      "dataset": "WORK.AGG1",
+      "type": "char",
+      "length": 1,
+      "label": "Census region code",
+      "derivation": "grouping variable carried through from the class statement (RGN)."
+    },
+    {
+      "name": "NPER",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": 8,
+      "label": "Count of persons in household (mean across records)",
+      "derivation": "computed via PROC SUMMARY as the mean of this variable across records sharing the same RGN (name unchanged from the input -- the `mean=;` output statement was not given explicit new names)."
+    },
+    {
+      "name": "PWGT",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": 8,
+      "label": "Person-level weight (mean across records)",
+      "derivation": "computed via PROC SUMMARY as the mean of this variable across records sharing the same RGN (name unchanged from the input -- the `mean=;` output statement was not given explicit new names)."
+    }
+  ]
+}

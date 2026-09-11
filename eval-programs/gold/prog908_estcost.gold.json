@@ -1,0 +1,135 @@
+{
+  "program_name": "prog908_estcost.sas",
+  "program_summary": {
+    "description": "Builds an analysis-ready file at the reporting unit level for a single reference period, by merging raw collected microdata with a control file, applying a retention filter, and writing the result to a caller-specified library; also aggregates totals by industry_code for review.",
+    "input_datasets": [
+      "WORK.D1",
+      "WORK.D2",
+      "WORK.D3"
+    ],
+    "output_datasets": [
+      "WORK.O1",
+      "WORK.AGG1"
+    ]
+  },
+  "macro_reference": [
+    {
+      "name": "bldout8",
+      "positional_params": [
+        "p"
+      ],
+      "keyword_params": [
+        {
+          "name": "lb",
+          "default": "work"
+        },
+        {
+          "name": "dbg",
+          "default": "0"
+        }
+      ],
+      "purpose": "Merges D1 and D2 to produce O1 for reference period `p`, applying a 4-step pipeline (sort/merge, transpose, summarize, derive).",
+      "called_by": [
+        "prog908_estcost.sas"
+      ]
+    }
+  ],
+  "variable_dictionary": [
+    {
+      "name": "RUID",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 14,
+      "label": "Reporting unit identifier",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "IND",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 6,
+      "label": "Industry classification code",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "QTR",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 6,
+      "label": "Quarter label YYYYQn",
+      "derivation": "carried through from the input file when populated; if blank, backfilled from the &dt macro variable set at the top of the program."
+    },
+    {
+      "name": "BCOST",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Benefit cost",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "HRSP",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total hours paid",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "OWGT",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Occupation-level weight",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "WCOST",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Wage and salary cost",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "EDTF",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 1,
+      "label": "Edit action flag (A/E/I)",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "BCOSTR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Benefit cost expressed as a rate per 100 units",
+      "derivation": "computed as round(100*BCOST/BCOST, 0.01) when BCOST > 0, else set to missing."
+    },
+    {
+      "name": "IND",
+      "dataset": "WORK.AGG1",
+      "type": "char",
+      "length": 6,
+      "label": "Industry classification code",
+      "derivation": "grouping variable carried through from the class statement (IND)."
+    },
+    {
+      "name": "BCOST",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": 8,
+      "label": "Benefit cost (sum across records)",
+      "derivation": "computed via PROC SUMMARY as the sum of this variable across records sharing the same IND (name unchanged from the input -- the `sum=;` output statement was not given explicit new names)."
+    },
+    {
+      "name": "HRSP",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": 8,
+      "label": "Total hours paid (sum across records)",
+      "derivation": "computed via PROC SUMMARY as the sum of this variable across records sharing the same IND (name unchanged from the input -- the `sum=;` output statement was not given explicit new names)."
+    }
+  ]
+}

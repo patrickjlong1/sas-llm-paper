@@ -1,0 +1,126 @@
+{
+  "program_name": "prog919_estab.sas",
+  "program_summary": {
+    "description": "Builds an analysis-ready file at the sampled establishment level for a single reference period, by merging raw collected microdata with a control file, applying a retention filter, and writing the result to a caller-specified library; also aggregates totals by state_fips for review.",
+    "input_datasets": [
+      "WORK.D1",
+      "WORK.D2"
+    ],
+    "output_datasets": [
+      "WORK.O1",
+      "WORK.AGG1"
+    ]
+  },
+  "macro_reference": [
+    {
+      "name": "bldout5",
+      "positional_params": [
+        "p"
+      ],
+      "keyword_params": [
+        {
+          "name": "lb",
+          "default": "work"
+        },
+        {
+          "name": "dbg",
+          "default": "0"
+        }
+      ],
+      "purpose": "Merges D1 and D2 to produce O1 for reference period `p`, applying a 4-step pipeline (sort/merge, transpose, summarize, derive).",
+      "called_by": [
+        "prog919_estab.sas"
+      ]
+    }
+  ],
+  "variable_dictionary": [
+    {
+      "name": "ESTID",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 12,
+      "label": "Establishment identifier",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "ST",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 2,
+      "label": "State FIPS code",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "PER",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 6,
+      "label": "Reference period YYYYMM",
+      "derivation": "carried through from the input file when populated; if blank, backfilled from the &dt macro variable set at the top of the program."
+    },
+    {
+      "name": "EMPL",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total employment level",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "HIR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total hires",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "SEP",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total separations",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "RSPF",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 1,
+      "label": "Response status flag (R/N/P)",
+      "derivation": "carried through unchanged from the merged input datasets."
+    },
+    {
+      "name": "HIRR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total hires expressed as a rate per 100 units",
+      "derivation": "computed as round(100*HIR/EMPL, 0.01) when HIR > 0, else set to missing."
+    },
+    {
+      "name": "ST",
+      "dataset": "WORK.AGG1",
+      "type": "char",
+      "length": 2,
+      "label": "State FIPS code",
+      "derivation": "grouping variable carried through from the class statement (ST)."
+    },
+    {
+      "name": "EMPL",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": 8,
+      "label": "Total employment level (mean across records)",
+      "derivation": "computed via PROC SUMMARY as the mean of this variable across records sharing the same ST (name unchanged from the input -- the `mean=;` output statement was not given explicit new names)."
+    },
+    {
+      "name": "HIR",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": 8,
+      "label": "Total hires (mean across records)",
+      "derivation": "computed via PROC SUMMARY as the mean of this variable across records sharing the same ST (name unchanged from the input -- the `mean=;` output statement was not given explicit new names)."
+    }
+  ]
+}

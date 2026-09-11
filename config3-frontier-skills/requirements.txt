@@ -1,0 +1,5 @@
+# The authoring step itself needs nothing -- Claude reads the .sas file and
+# writes JSON directly. These are only for the ground-truth harvest and the
+# ODA push step (run with /internal/venvs/main/bin/python3, see SETUP.md):
+saspy
+pandas
