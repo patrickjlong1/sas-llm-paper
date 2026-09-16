@@ -1,0 +1,3 @@
+# Only llm_judge.py needs a third-party package (the Ollama HTTP API).
+# score.py, run_eval.py, bootstrap_ci.py, difficulty_tags.py are stdlib-only.
+requests

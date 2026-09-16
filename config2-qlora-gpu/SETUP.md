@@ -66,11 +66,33 @@ before this will download. Keep the base model matched to config1's
 "config1 vs config2" a fine-tuning comparison rather than a different-model
 comparison.
 
-Expect roughly 30-90 minutes on a free T4 for 600 examples x 2 epochs at
-`--maxlen 2048`. Record the actual wall-clock time and note it's a
+Expect roughly 1.5-2.5 hours on a free T4 for 600 examples x 2 epochs at
+`--maxlen 2048` (150 optimizer steps; observed ~50s/step on a T4 once
+tokenization/weight-loading is done -- the 30-90 min in earlier drafts of
+this doc was optimistic). Record the actual wall-clock time and note it's a
 **one-time training cost**, separate from the per-program inference cost in
 the results table (plan: "cost per program" is about *running* the model,
 not training it).
+
+`requirements.txt` only pins a floor (`trl>=0.24`), and `trl`'s `SFTConfig`
+has shed/renamed fields across releases -- if you see
+`WARNING: this trl's SFTConfig does not accept: <field> -- using its
+defaults for them` at startup, that's expected and non-fatal (the script
+filters its kwargs against whatever `SFTConfig` your resolved `trl` actually
+has); only worth a second look if the dropped field is one you specifically
+need control over (e.g. `assistant_only_loss` itself).
+
+Colab's local disk does **not** survive a runtime recycle. Either mount
+Drive and point `--out` at it, or download `../adapters/sasdoc-lora/`
+(it's just tens of MB -- LoRA weights, not the base model) before the
+session ends:
+
+```python
+from google.colab import files
+import shutil
+shutil.make_archive("sasdoc-lora", "zip", "../adapters/sasdoc-lora")
+files.download("sasdoc-lora.zip")
+```
 
 ## 5. Generate predictions for scoring
 
@@ -84,6 +106,41 @@ on) and write `.pred.json` + `.meta.json` per program in the same shape
 config1 and config3 use, so `results/score.py` scores all three identically.
 Run both so the paper can report base-vs-tuned on identical inputs, not just
 tuned-vs-config1/config3.
+
+## 5b. Score the predictions
+
+`results/run_eval.py` is the actual pipeline entry point -- it wraps
+`score.py` (+ `llm_judge.py` if you ask for `--run-judge`) and writes the
+`.scores.jsonl` that both this per-config step and the final cross-config
+results table read:
+
+```bash
+python3 ../results/run_eval.py --config config2-base --pred-dir ../results/preds/config2-base \
+    --out-prefix ../results/outputs/config2-base
+python3 ../results/run_eval.py --config config2-tuned --pred-dir ../results/preds/config2-tuned \
+    --out-prefix ../results/outputs/config2-tuned
+```
+
+(`--gold-dir`/`--source-dir` default to `../eval-programs/gold` /
+`../eval-programs/programs`, matching this folder's layout, so they're
+omitted above. Add `--run-judge` if you want the free-text description
+quality metric too, but that needs a judge model reachable from the
+session -- see `results/run_eval.py`'s `--judge-model`.)
+
+Then combine base + tuned (and, once they exist, config1/config3) into the
+plan's results table:
+
+```bash
+python3 ../results/run_eval.py --table \
+    --scores ../results/outputs/config2-base.scores.jsonl --meta-dir ../results/preds/config2-base --label "Config 2: base (no adapter)"
+python3 ../results/run_eval.py --table \
+    --scores ../results/outputs/config2-tuned.scores.jsonl --meta-dir ../results/preds/config2-tuned --label "Config 2: QLoRA-tuned"
+```
+
+Each line of a `.scores.jsonl` file is one program's metrics (schema
+validity, variable/macro/IO precision-recall-F1, hallucination rate -- see
+`results/score.py`'s docstring for the full list); the `--table` runs print
+the plan's actual results-table row (bootstrapped mean + CI per metric).
 
 ## 6. Setting up your SAS OnDemand for Academics (ODA) credentials
 

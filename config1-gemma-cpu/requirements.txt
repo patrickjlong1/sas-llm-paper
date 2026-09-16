@@ -1,0 +1,4 @@
+# Just the Ollama HTTP client for document_sas.py.
+# saspy + pandas (for push_to_oda.py, step 4 of SETUP.md) are already
+# installed into /internal/venvs/main on this box -- see SETUP.md.
+requests

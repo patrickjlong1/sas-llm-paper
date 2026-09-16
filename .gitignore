@@ -30,7 +30,6 @@ results/outputs/*
 *.pem
 *.key
 .env
-.claude
 
 # -- editor / OS cruft ----------------------------------------------------------
 .DS_Store

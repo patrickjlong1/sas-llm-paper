@@ -18,7 +18,7 @@ eval-programs/, and double check with:
 
 Colab setup (run once, in a cell, before this script):
 
-    !pip -q install "transformers>=4.44" "trl>=0.9" "peft>=0.12" \
+    !pip -q install "transformers>=4.44" "trl>=0.24" "peft>=0.12" \
                     "bitsandbytes>=0.43" "datasets>=2.20" "accelerate>=0.33"
 
 Hardware reality check (plan: report hardware honestly):
@@ -34,15 +34,15 @@ Run:
 """
 
 import argparse
+import inspect
 import json
 import os
 
 import torch
 from datasets import Dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-from transformers import (AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig,
-                          TrainingArguments)
-from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from trl import SFTConfig, SFTTrainer
 
 from schema import PROMPT_SCHEMA_BLOCK
 
@@ -73,7 +73,7 @@ def to_chat(rec, tok):
         {"role": "user", "content": "```sas\n" + rec["sas"] + "\n```"},
         {"role": "assistant", "content": target},
     ]
-    return {"text": tok.apply_chat_template(msgs, tokenize=False)}
+    return {"messages": msgs}
 
 
 def main():
@@ -98,9 +98,6 @@ def main():
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--out", default="../adapters/sasdoc-lora")
     ap.add_argument("--push", default=None, help="hub repo id, e.g. yourname/sasdoc-lora")
-    ap.add_argument("--resp-template", default="<start_of_turn>model\n",
-                    help="Gemma chat template's assistant-turn marker -- verify against "
-                         "tok.chat_template if you swap --model to a different family")
     args = ap.parse_args()
 
     bf16_ok = torch.cuda.is_bf16_supported()
@@ -116,7 +113,8 @@ def main():
     # teaches the model to stop mid-dictionary, the single most common way this
     # experiment fails.
     def fits(rec):
-        return len(tok(to_chat(rec, tok)["text"]).input_ids) <= args.maxlen
+        ids = tok.apply_chat_template(to_chat(rec, tok)["messages"], tokenize=True)
+        return len(ids) <= args.maxlen
 
     kept = [r for r in train_recs if fits(r)]
     print("train: kept %d / %d at maxlen=%d" % (len(kept), len(train_recs), args.maxlen))
@@ -151,10 +149,11 @@ def main():
 
     # Loss on the assistant turn only. Without this the model spends capacity
     # learning to reproduce SAS programs, which is not the task.
-    collator = DataCollatorForCompletionOnlyLM(response_template=args.resp_template, tokenizer=tok)
-
-    targs = TrainingArguments(
+    targs_kwargs = dict(
         output_dir=args.out,
+        max_length=args.maxlen,
+        packing=False,
+        assistant_only_loss=True,
         num_train_epochs=args.epochs,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=8,
@@ -171,12 +170,19 @@ def main():
         report_to="none",
         seed=20260903,
     )
+    # requirements.txt only pins a floor (trl>=0.24) -- the resolved trl's
+    # SFTConfig field names can drift out from under this script. Filter
+    # against the live signature instead of crashing on a kwarg it dropped.
+    accepted = inspect.signature(SFTConfig.__init__).parameters
+    dropped = {k: v for k, v in targs_kwargs.items() if k not in accepted}
+    if dropped:
+        print("WARNING: this trl's SFTConfig does not accept: %s -- using its defaults for them"
+              % ", ".join(dropped))
+    targs = SFTConfig(**{k: v for k, v in targs_kwargs.items() if k in accepted})
 
     trainer = SFTTrainer(
-        model=model, args=targs,
+        model=model, args=targs, processing_class=tok,
         train_dataset=ds_train, eval_dataset=ds_eval,
-        dataset_text_field="text", max_seq_length=args.maxlen,
-        data_collator=collator, packing=False,
     )
     trainer.train()
 

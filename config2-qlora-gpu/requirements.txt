@@ -1,6 +1,12 @@
 # Install in your Colab (or other GPU) session -- see SETUP.md.
+# trl>=0.24 is a hard floor, not just a version bump: qlora_finetune.py uses
+# SFTConfig + assistant_only_loss on a "messages"-shaped dataset, which is
+# the current trl API. trl<0.9's collator API (DataCollatorForCompletionOnlyLM,
+# dataset_text_field passed to SFTTrainer directly) was removed upstream, AND
+# those old trl releases pin numpy<2.0, which has no Python 3.13 wheel -- so
+# pinning trl low to match old code is not an option on 3.13, only forward.
 transformers>=4.44
-trl>=0.9
+trl>=0.24
 peft>=0.12
 bitsandbytes>=0.43
 datasets>=2.20
