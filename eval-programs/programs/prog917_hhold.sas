@@ -52,9 +52,9 @@ data _t3; set _t2; run;
 data &lb..o1;
   set _t3;
 run;
-%%if &dbg=0 %%then %%do;
+%if &dbg=0 %then %do;
   proc datasets lib=work nolist; delete _t: _s: _x:; quit;
-%%end;
+%end;
 %mend bldout9;
 
 %bldout9(p=&dt);

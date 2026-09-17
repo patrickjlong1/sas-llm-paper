@@ -335,9 +335,9 @@ def render_sas(spec, rng):
     a("  set _t%d;" % last)
     a("run;")
     if any(q["name"] == "dbg" for q in p):
-        a("%%if &dbg=0 %%then %%do;")
+        a("%if &dbg=0 %then %do;")
         a("  proc datasets lib=work nolist; delete _t: _s: _x:; quit;")
-        a("%%end;")
+        a("%end;")
     a("%%mend %s;" % spec["macro"]["name"])
     a("")
     a("%%%s(p=&dt);" % spec["macro"]["name"])

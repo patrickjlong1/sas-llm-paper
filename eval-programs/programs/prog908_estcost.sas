@@ -70,9 +70,9 @@ run;
 data &lb..o1;
   set _t4;
 run;
-%%if &dbg=0 %%then %%do;
+%if &dbg=0 %then %do;
   proc datasets lib=work nolist; delete _t: _s: _x:; quit;
-%%end;
+%end;
 %mend bldout8;
 
 %bldout8(p=&dt);

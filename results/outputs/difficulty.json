@@ -1,0 +1,222 @@
+{
+  "prog900_estab.sas": {
+    "n_lines": 63,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 7,
+    "n_procs": 4,
+    "max_macro_nesting_depth": 0,
+    "n_output_refs": 5,
+    "difficulty_score": 7.15,
+    "difficulty_tier": "easy"
+  },
+  "prog901_hhold.sas": {
+    "n_lines": 75,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 8,
+    "n_procs": 4,
+    "max_macro_nesting_depth": 0,
+    "n_output_refs": 5,
+    "difficulty_score": 7.75,
+    "difficulty_tier": "easy"
+  },
+  "prog902_estcost.sas": {
+    "n_lines": 79,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 8,
+    "n_procs": 5,
+    "max_macro_nesting_depth": 1,
+    "n_output_refs": 5,
+    "difficulty_score": 10.45,
+    "difficulty_tier": "medium"
+  },
+  "prog903_estcost.sas": {
+    "n_lines": 64,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 7,
+    "n_procs": 4,
+    "max_macro_nesting_depth": 0,
+    "n_output_refs": 5,
+    "difficulty_score": 7.2,
+    "difficulty_tier": "easy"
+  },
+  "prog904_hhold.sas": {
+    "n_lines": 75,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 8,
+    "n_procs": 4,
+    "max_macro_nesting_depth": 0,
+    "n_output_refs": 5,
+    "difficulty_score": 7.75,
+    "difficulty_tier": "easy"
+  },
+  "prog905_estcost.sas": {
+    "n_lines": 67,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 7,
+    "n_procs": 5,
+    "max_macro_nesting_depth": 1,
+    "n_output_refs": 5,
+    "difficulty_score": 9.85,
+    "difficulty_tier": "medium"
+  },
+  "prog906_estcost.sas": {
+    "n_lines": 76,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 8,
+    "n_procs": 4,
+    "max_macro_nesting_depth": 0,
+    "n_output_refs": 5,
+    "difficulty_score": 7.8,
+    "difficulty_tier": "easy"
+  },
+  "prog907_estcost.sas": {
+    "n_lines": 66,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 7,
+    "n_procs": 5,
+    "max_macro_nesting_depth": 1,
+    "n_output_refs": 5,
+    "difficulty_score": 9.8,
+    "difficulty_tier": "medium"
+  },
+  "prog908_estcost.sas": {
+    "n_lines": 78,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 8,
+    "n_procs": 5,
+    "max_macro_nesting_depth": 1,
+    "n_output_refs": 5,
+    "difficulty_score": 10.4,
+    "difficulty_tier": "medium"
+  },
+  "prog909_hhold.sas": {
+    "n_lines": 66,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 7,
+    "n_procs": 5,
+    "max_macro_nesting_depth": 1,
+    "n_output_refs": 5,
+    "difficulty_score": 9.8,
+    "difficulty_tier": "medium"
+  },
+  "prog910_estab.sas": {
+    "n_lines": 57,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 6,
+    "n_procs": 3,
+    "max_macro_nesting_depth": 0,
+    "n_output_refs": 4,
+    "difficulty_score": 6.35,
+    "difficulty_tier": "easy"
+  },
+  "prog911_estab.sas": {
+    "n_lines": 64,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 7,
+    "n_procs": 4,
+    "max_macro_nesting_depth": 0,
+    "n_output_refs": 5,
+    "difficulty_score": 7.2,
+    "difficulty_tier": "easy"
+  },
+  "prog912_estab.sas": {
+    "n_lines": 79,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 8,
+    "n_procs": 5,
+    "max_macro_nesting_depth": 1,
+    "n_output_refs": 5,
+    "difficulty_score": 10.45,
+    "difficulty_tier": "medium"
+  },
+  "prog913_estab.sas": {
+    "n_lines": 63,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 7,
+    "n_procs": 4,
+    "max_macro_nesting_depth": 0,
+    "n_output_refs": 5,
+    "difficulty_score": 7.15,
+    "difficulty_tier": "easy"
+  },
+  "prog914_hhold.sas": {
+    "n_lines": 64,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 7,
+    "n_procs": 4,
+    "max_macro_nesting_depth": 0,
+    "n_output_refs": 5,
+    "difficulty_score": 7.2,
+    "difficulty_tier": "easy"
+  },
+  "prog915_estab.sas": {
+    "n_lines": 63,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 7,
+    "n_procs": 4,
+    "max_macro_nesting_depth": 0,
+    "n_output_refs": 5,
+    "difficulty_score": 7.15,
+    "difficulty_tier": "easy"
+  },
+  "prog916_estab.sas": {
+    "n_lines": 60,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 6,
+    "n_procs": 5,
+    "max_macro_nesting_depth": 1,
+    "n_output_refs": 5,
+    "difficulty_score": 9.5,
+    "difficulty_tier": "medium"
+  },
+  "prog917_hhold.sas": {
+    "n_lines": 60,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 6,
+    "n_procs": 4,
+    "max_macro_nesting_depth": 1,
+    "n_output_refs": 4,
+    "difficulty_score": 9.0,
+    "difficulty_tier": "medium"
+  },
+  "prog918_hhold.sas": {
+    "n_lines": 64,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 7,
+    "n_procs": 4,
+    "max_macro_nesting_depth": 0,
+    "n_output_refs": 5,
+    "difficulty_score": 7.2,
+    "difficulty_tier": "easy"
+  },
+  "prog919_estab.sas": {
+    "n_lines": 66,
+    "n_macros": 1,
+    "n_macro_calls": 0,
+    "n_datasteps": 7,
+    "n_procs": 5,
+    "max_macro_nesting_depth": 1,
+    "n_output_refs": 5,
+    "difficulty_score": 9.8,
+    "difficulty_tier": "medium"
+  }
+}

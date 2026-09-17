@@ -82,6 +82,13 @@ def _require_saspy():
     return saspy
 
 
+def _str_or_blank(v):
+    """SAS blank char values come back from sd2df() as NaN (a float), not
+    None or "" -- `v or ""` is truthy for NaN and then crashes on
+    .strip(), so check the type directly instead of truthiness."""
+    return v.strip() if isinstance(v, str) else ""
+
+
 def harvest(sas, program_name, libname, run_attempted, exclude_pattern=None):
     """Query dictionary.columns/dictionary.tables for everything currently
     in `libname`. Assumes the caller already submitted the program (if
@@ -100,7 +107,7 @@ def harvest(sas, program_name, libname, run_attempted, exclude_pattern=None):
         "where libname='%s'%s "
         "order by memname, varnum;"
         "create table work._sdgtabs as "
-        "select memname, nobs, nvar, label as table_label "
+        "select memname, nobs, nvar, memlabel as table_label "
         "from dictionary.tables "
         "where libname='%s' and memtype='DATA'%s;"
         "quit;" % (lib_upper, exclude_clause, lib_upper, exclude_clause)
@@ -119,7 +126,7 @@ def harvest(sas, program_name, libname, run_attempted, exclude_pattern=None):
         tables[row["memname"].strip()] = {
             "nobs": int(row["nobs"]) if row["nobs"] == row["nobs"] else None,  # NaN check
             "nvars": int(row["nvar"]) if row["nvar"] == row["nvar"] else None,
-            "table_label": (row["table_label"] or "").strip() if row["table_label"] else "",
+            "table_label": _str_or_blank(row["table_label"]),
         }
 
     columns = []
@@ -133,9 +140,9 @@ def harvest(sas, program_name, libname, run_attempted, exclude_pattern=None):
             "type": "char" if str(row["type"]).strip() == "1" else
                     ("num" if str(row["type"]).strip() == "2" else str(row["type"]).strip()),
             "length": int(row["length"]) if row["length"] == row["length"] else None,
-            "format": (row["format"] or "").strip() if row["format"] else "",
-            "informat": (row["informat"] or "").strip() if row["informat"] else "",
-            "label": (row["label"] or "").strip() if row["label"] else "",
+            "format": _str_or_blank(row["format"]),
+            "informat": _str_or_blank(row["informat"]),
+            "label": _str_or_blank(row["label"]),
             "varnum": int(row["varnum"]) if row["varnum"] == row["varnum"] else None,
         })
 
@@ -175,6 +182,13 @@ def main():
     program_name = os.path.splitext(os.path.basename(args.sas_file))[0]
     source = open(args.sas_file).read()
 
+    # sascfg_personal.py's __file__ gets relocated to a tempdir by saspy's
+    # cfgfile-override import, so it can't find the repo root on its own --
+    # tell it explicitly, from OUR __file__ (this script isn't relocated).
+    os.environ.setdefault(
+        "SAS_DOC_GEN_PROJECT_ROOT",
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    )
     sas = saspy.SASsession(cfgfile=args.cfgfile)
     print("connected:", sas, file=sys.stderr)
 

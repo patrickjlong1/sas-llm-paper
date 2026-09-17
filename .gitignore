@@ -22,7 +22,6 @@ config2-qlora-gpu/adapters/
 # -- generated eval outputs (results) -------------------------------------------
 results/preds/*
 !results/preds/.gitkeep
-results/outputs/*
 !results/outputs/.gitkeep
 
 # -- credentials / local machine config, never commit --------------------------

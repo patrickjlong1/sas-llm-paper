@@ -87,6 +87,13 @@ def main():
     if not any(tables.values()):
         sys.exit("Nothing in the local catalog yet -- run document_sas.py first.")
 
+    # sascfg_personal.py's __file__ gets relocated to a tempdir by saspy's
+    # cfgfile-override import, so it can't find the repo root on its own --
+    # tell it explicitly, from OUR __file__ (this script isn't relocated).
+    os.environ.setdefault(
+        "SAS_DOC_GEN_PROJECT_ROOT",
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    )
     sas = saspy.SASsession(cfgfile=args.cfgfile)
     print(sas)
 

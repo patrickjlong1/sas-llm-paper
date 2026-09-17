@@ -30,13 +30,19 @@ create table work._sdgcols as
   where libname='WORK'
   order by memname, varnum;
 create table work._sdgtabs as
-  select memname, nobs, nvar, label as table_label
+  select memname, nobs, nvar, memlabel as table_label
   from dictionary.tables
   where libname='WORK' and memtype='DATA';
 quit;
 ```
 
 Column notes:
+
+- **`dictionary.tables` calls the dataset-level label `memlabel`, not
+  `label`** -- `label` only exists on `dictionary.columns` (the per-variable
+  label). Mixing them up doesn't silently return blanks, it fails the whole
+  query: `ERROR: The following columns were not found in the contributing
+  tables: label.`
 
 - **`type`** in `dictionary.columns` comes back as `1` (numeric) or `2`
   (character) in most SAS versions -- not the strings `"num"`/`"char"`.

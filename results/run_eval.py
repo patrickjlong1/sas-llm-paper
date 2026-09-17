@@ -71,9 +71,9 @@ def _mean_cost_time(pred_dir):
     times, costs = [], []
     for meta_path in glob.glob(os.path.join(pred_dir, "*.meta.json")):
         meta = json.load(open(meta_path))
-        if "elapsed_sec" in meta:
+        if meta.get("elapsed_sec") is not None:
             times.append(meta["elapsed_sec"])
-        if "cost_usd" in meta:
+        if meta.get("cost_usd") is not None:
             costs.append(meta["cost_usd"])
     t = statistics.mean(times) if times else None
     c = statistics.mean(costs) if costs else None
