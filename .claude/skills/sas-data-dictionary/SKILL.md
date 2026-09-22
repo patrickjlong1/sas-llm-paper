@@ -130,6 +130,11 @@ Read the actual `.sas` file. Combine it with the outputs of steps 1-3 to
 write a dictionary JSON matching the schema above (`write_dictionary.py`
 expects exactly this shape).
 
+(For a whole corpus unattended, `config3-frontier-skills/claude_driver.py`
+does steps 1-5 and 7 over the Anthropic API instead -- it gives a Claude
+model the same harvest scripts as tools and these same rules as its system
+prompt. Interactively, keep going here.)
+
 Hard rules while writing this:
 
 - **Never name a dataset, variable, or macro parameter that isn't in the
@@ -211,9 +216,23 @@ time per program for the results table's "time per program" column.
 ## Batch use
 
 For a whole directory of legacy programs (or the 20-program eval set), loop
-steps 1-5 per file yourself (there's no single CLI that does steps 1/4/5
-together, since step 4 is you reading and writing, not a subprocess) and run
-step 6 once at the end against the accumulated catalog.
+steps 1-5 per file yourself and run step 6 once at the end against the
+accumulated catalog.
+
+Unattended, `claude_driver.py` does that loop over the Anthropic API -- a
+Claude model calls the step 1-3 scripts as tools, authors the dictionary, and
+the driver runs steps 5 and 7 per program, with measured time and real
+per-program cost. Step 6 is still one push at the end. Run it with the saspy
+interpreter and an `ANTHROPIC_API_KEY` in the environment:
+
+```bash
+/internal/venvs/main/bin/python3 config3-frontier-skills/claude_driver.py \
+    --dir eval-programs/programs \
+    --catalog config3-frontier-skills/catalog/ \
+    --preds-out results/preds/config3-frontier-skills
+```
+
+See `config3-frontier-skills/SETUP.md` section 1b.
 
 ## Don't confuse this with config1
 

@@ -32,6 +32,12 @@ sas-doc-gen-project/
 ├── config3-frontier-skills/      Config 3: frontier model (Claude) with
 │                                skills -- real PROC CONTENTS/dictionary.
 │                                columns ground truth via SASPy.
+│                                claude_driver.py runs it unattended HERE
+│                                over the Anthropic API (claude-opus-5),
+│                                giving Claude those harvest scripts as
+│                                tools; interactively, the skill does the
+│                                same. No local compute, but it does need
+│                                this box's SASPy/ODA setup + jre/.
 │                                See SETUP.md for the ODA + API/Code setup.
 │
 ├── eval-programs/                20 held-out SAS programs (bad names, no
@@ -68,9 +74,9 @@ free Colab runtime -- that's the shortest path:
 
 | notebook | runtime |
 |---|---|
-| `config1-gemma-cpu/config1_gemma_cpu.ipynb` | Colab **CPU** (or this box's Ollama server) |
+| `config1-gemma-cpu/config1_gemma_cpu.ipynb` | Colab **CPU**, `google/gemma-3-4b-it` via `transformers` (the Ollama path is CLI-only -- see its `SETUP.md`) |
 | `config2-qlora-gpu/config2_qlora_gpu.ipynb` | Colab **T4 GPU** |
-| `config3-frontier-skills/config3_frontier_skills.ipynb` | a Claude Code session (the model *is* the config) |
+| `config3-frontier-skills/config3_frontier_skills.ipynb` | **this box** -- `claude-opus-5` via the Anthropic API (needs no local compute, but does need this box's SASPy/ODA + `jre/`), or a Claude Code session interactively |
 
 Each opens with a bootstrap cell that clones the whole repo and `cd`s into
 its own folder -- pulling a single config folder on its own leaves every
@@ -92,8 +98,13 @@ cd ../config1-gemma-cpu && python3 document_sas.py --dir ../eval-programs/progra
     --catalog ../results/catalog/config1-gemma-cpu
 
 # 3. Run config2 (QLoRA) -- needs a GPU, see config2-qlora-gpu/SETUP.md.
-# 4. Run config3 (Claude + skills) -- see config3-frontier-skills/SETUP.md,
-#    or just ask Claude Code to "document these SAS programs" from the repo root.
+# 4. Run config3 (Claude + SAS tool access) -- needs ANTHROPIC_API_KEY, and the
+#    interpreter with saspy so the ground-truth tool works.
+cd ../config3-frontier-skills && /internal/venvs/main/bin/python3 claude_driver.py \
+    --dir ../eval-programs/programs \
+    --catalog catalog/ --preds-out ../results/preds/config3-frontier-skills
+#    Or ask Claude Code to "document these SAS programs" from the repo root and
+#    let the sas-data-dictionary skill drive it interactively.
 
 # 5. Score each config (also writes the corpus-provenance sidecar):
 cd ../results

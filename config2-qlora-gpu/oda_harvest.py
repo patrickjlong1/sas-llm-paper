@@ -37,15 +37,28 @@ import sys
 CFGFILE_DEFAULT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sascfg_personal.py")
 
 
+def _str_or_blank(v):
+    """SAS blank char values come back from sd2df() as NaN (a float), not None
+    or "" -- and NaN is TRUTHY, so `(v or "").strip()` does not fall through to
+    "" as it looks like it will: it calls .strip() on a float and raises
+    AttributeError. Check the type instead. Every program in
+    ../eval-programs/ has unlabelled columns, so this is the common path, not
+    an edge case. (Same helper, same reason, as config3's sas_metadata.py.)"""
+    return v.strip() if isinstance(v, str) else ""
+
+
 def harvest_one(sas, program_name, source_text, libname="work"):
     sas.submit("proc datasets lib=%s kill nolist; quit;" % libname)
     res = sas.submit(source_text)
     log = res["LOG"]
     run_errors = [l for l in log.split("\n") if l.startswith("ERROR")]
 
+    # Exclude this query's own output table: dictionary.columns/tables see
+    # work._sdgcols as it is being created, so without this the harvest can
+    # report the scratch table as one of the program's own datasets.
     sql = ("proc sql noprint; create table work._sdgcols as "
           "select memname, name, type, length, label from dictionary.columns "
-          "where libname='%s'; quit;" % libname.upper())
+          "where libname='%s' and memname ne '_SDGCOLS'; quit;" % libname.upper())
     sas.submit(sql)
     df = sas.sd2df("_sdgcols", libref="work")
     sas.submit("proc datasets lib=work nolist; delete _sdgcols; quit;")
@@ -55,9 +68,15 @@ def harvest_one(sas, program_name, source_text, libname="work"):
         columns.append({
             "memname": row["memname"].strip(),
             "variable_name": row["name"].strip(),
-            "type": "char" if str(row["type"]).strip() == "1" else "num",
+            # dictionary.columns' `type` is the CHARACTER value 'char'/'num'.
+            # The 1/2 encoding belongs to PROC CONTENTS' output dataset (and
+            # there 1=num, 2=char, i.e. the reverse of what a "1 means char"
+            # reading assumes). Handle both and pass through anything else,
+            # rather than silently calling every character column numeric.
+            "type": "char" if str(row["type"]).strip() == "1" else
+                    ("num" if str(row["type"]).strip() == "2" else str(row["type"]).strip()),
             "length": int(row["length"]) if row["length"] == row["length"] else None,
-            "label": (row["label"] or "").strip() if row["label"] else "",
+            "label": _str_or_blank(row["label"]),
         })
     return {"program_name": program_name, "run_errors": run_errors, "columns": columns}
 

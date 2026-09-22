@@ -289,7 +289,27 @@ All of this runs in the Colab/Kaggle session.
    install: `oda_harvest.py` already passes it as `--cfgfile`. Earlier
    drafts of this doc said to copy it; that step was redundant.
 
-5. **Run the harvest.** `--out` is a **directory** -- one
+5. **Preflight (the notebook does this for you).** Two things break the
+   harvest on Colab:
+
+   * **`NoClassDefFoundError: org/omg/CORBA/COMM_FAILURE`**, followed by
+     `SAS Connection failed` and `SAS process has terminated unexpectedly`.
+     Cause: a hand-built `"classpath"` in `sascfg_personal.py` listing only
+     `saspy/java/iomclient/*.jar`. SAS's IOM protocol needs
+     `org.omg.CORBA.*`, which the JDK carried through Java 8 and dropped in
+     JEP 320 -- so on the JDK `apt-get` installs, the Java helper cannot
+     start. saspy's own default classpath includes the CORBA back-port it
+     ships in `java/thirdparty/`; that old list also named `log4j.jar` and
+     `sas.rutil.jar`, which current saspy builds do not ship at all. Fix:
+     do not set `classpath`. Fixed in this folder's `sascfg_personal.py`;
+     if you hit it anyway you are running an older clone --
+     `git -C /content/sas-llm-paper pull`, restart the runtime, re-run.
+     (The notebook's preflight cell strips the key from a stale clone
+     automatically.)
+   * **An empty `java/thirdparty/`** in the installed saspy: no classpath
+     can fix that one, `pip install -U saspy`.
+
+6. **Run the harvest.** `--out` is a **directory** -- one
    `<program>.json` and one `<program>.txt` per program:
    ```bash
    python3 oda_harvest.py --sas-dir ../eval-programs/programs \
@@ -300,7 +320,7 @@ All of this runs in the Colab/Kaggle session.
    Read them: a program that errored out contributes less ground truth
    than one that didn't.
 
-6. **Re-score against it.** This is the step that makes section 6 worth
+7. **Re-score against it.** This is the step that makes section 6 worth
    running -- without it the harvest sits in `../data/oda_metadata/` and
    changes nothing:
    ```bash

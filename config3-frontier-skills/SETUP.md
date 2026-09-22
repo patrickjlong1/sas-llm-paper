@@ -8,28 +8,117 @@ configs 1 and 2 (model size / fine-tuning), and the plan asks you to state
 that asymmetry explicitly rather than present it as "config 3 just has a
 smarter model."
 
-## 1. The model: this Claude Code session itself
+## 1. The model: Claude, two ways to drive it
 
-There is no separate model download or API call to configure for the
-*writing* step -- "the frontier model" here is whichever Claude Code (or
-Claude via the API) session you're running this skill in. If you're
-following this in Claude Code already, skip to step 2.
+"The frontier model" here is Claude. There are two ways to run it, and they
+are the same config -- say which one produced the numbers you report.
 
-**If you want to drive this via the Anthropic API instead of Claude Code**
-(e.g., to script config3 as a batch job rather than interactively):
+### a. Interactively, in a Claude Code session
 
-1. Get an API key at https://console.anthropic.com (a low-cost pay-as-you-go
-   key works fine -- this task is a handful of short requests per program).
-2. `export ANTHROPIC_API_KEY=sk-ant-...` in your shell (never paste it into
-   a chat session or commit it to this repo).
-3. Write a small driver script that sends the SAS source + the ground-truth
-   JSON from `sas_metadata.py`/`header_extract.py`/`extract.py` (steps 1-3
-   in the skill workflow) to the Messages API with
-   `schema.PROMPT_SCHEMA_BLOCK` as part of the system prompt, and saves the
-   response via `save_prediction.py`. See `../results/llm_judge.py` for a
-   worked example of the request shape (same API, different purpose).
-   Record the actual per-call cost from the API response's usage fields for
-   the results table's "cost per program" column -- don't estimate it.
+Nothing to configure: the session you are typing in IS the model. Ask it to
+"document `eval-programs/programs/prog900_estab.sas` using the
+sas-data-dictionary skill" and the skill triggers, runs the scripts in this
+folder, and writes the dictionary JSON. Best for one program you want to
+interrogate as it is written. Cost is `not recorded` (an interactive session
+has no metered per-call cost -- which is NOT the same as `$0`), and
+`--elapsed-sec` is whatever you timed by hand.
+
+### b. Unattended, through the Anthropic API -- `claude_driver.py`
+
+This is what the notebook (`config3_frontier_skills.ipynb`) runs, **on this
+box**. Config3 needs no local compute -- the model is remote -- but it does
+need a live SASPy/ODA connection and Java for it, and all of that is
+already provisioned here:
+
+| need | here |
+|---|---|
+| `saspy` + `pandas` + `anthropic` | `/internal/venvs/main` |
+| Java for SASPy's IOM connection | `../jre/` (portable JDK 17, gitignored) |
+| ODA credentials | `~/.authinfo` |
+| outputs | in the repo, persistent |
+
+Use that one interpreter for everything, so the driver and the SAS tool it
+shells out to agree on what is importable:
+
+```bash
+PY=/internal/venvs/main/bin/python3
+$PY -m pip install anthropic          # saspy + pandas are already there
+```
+
+1. Get an API key at https://console.anthropic.com. This task is a handful
+   of short requests per program.
+2. `export ANTHROPIC_API_KEY=sk-ant-...` in your shell -- never paste it
+   into a chat session or commit it. An `ant auth login` profile also
+   works, and the notebook's Setup 2 cell will prompt for the key into the
+   kernel's environment if neither is set. The driver checks credentials
+   with one free metadata call before the first program, so a missing or
+   rejected key fails immediately and bills nothing.
+3. Run it:
+
+```bash
+# one program, with catalog + scoreable prediction
+$PY claude_driver.py ../eval-programs/programs/prog900_estab.sas \
+    --catalog catalog/ --preds-out ../results/preds/config3-frontier-skills
+
+# all 20, unattended -- budget ~a minute per program, most of it SAS
+$PY claude_driver.py --dir ../eval-programs/programs \
+    --catalog catalog/ --preds-out ../results/preds/config3-frontier-skills
+
+# the plan's fairer isolate: same model, ground-truth tool withheld
+# (no SAS sessions at all, so much faster)
+$PY claude_driver.py --dir ../eval-programs/programs --no-sas-tool \
+    --out claude-runs-nogt \
+    --preds-out ../results/preds/config3-frontier-skills-nogt
+```
+
+**Running it in Colab instead is possible but pointless:** you would
+reinstall saspy, `apt-get install default-jdk` (the repo's `jre/` is 136 MB
+and gitignored, so a fresh clone lacks it), re-enter the ODA credentials
+from the Secrets panel, and zip the outputs off before the runtime
+recycles -- in exchange for free compute this config never uses. Colab is
+for `config1-gemma-cpu/` (free CPU) and `config2-qlora-gpu/` (free T4).
+The notebook's last section lists what to change if you must.
+
+Model is `claude-opus-5` by default (`--model` to change it), with
+`output_config.effort` at `high` (`--effort low|medium|high|xhigh|max`).
+
+**Tool access is real, not pre-baked.** The driver gives Claude four tools
+and lets it decide when to call them: `sas_column_metadata` (this folder's
+`sas_metadata.py` -- SAS's own `dictionary.columns`/`dictionary.tables`),
+`header_comments` (`header_extract.py`), `static_identifier_scan`
+(`extract.py`), and `grep_source` (regex over the source, so a name can be
+checked before it is written). Handing the model a pre-harvested metadata
+blob instead would make config3 "a bigger model with a better prompt",
+which is precisely the claim `PLAN.md` says not to make.
+
+The prompt's schema contract is `schema.PROMPT_SCHEMA_BLOCK` -- byte for
+byte the block configs 1 and 2 get -- plus SKILL.md's step-4 authoring
+rules. Decoding is NOT schema-constrained by default: `--structured-output`
+will do that, but it makes schema validity trivially 1.00 and so makes that
+column measure the harness rather than the model. Declare it if you use it.
+
+What it writes per program:
+
+| path | contents |
+|---|---|
+| `<out>/<program>.dictionary.json` | the authored dictionary (`schema.py`'s shape) |
+| `<out>/<program>.run.json` | api turns, repair turns, tool-call counts, token usage, measured cost |
+| `<out>/metadata/<program>.json` | the harvested SAS ground truth, in the layout `run_eval.py --extra-source-dir` reads |
+
+With `--catalog` it then runs `write_dictionary.py` (validation + guardrail
+flags + catalog upsert) and with `--preds-out` it runs `save_prediction.py`,
+both as subprocesses -- so there is exactly one implementation of those
+steps, shared with the interactive path. `elapsed_sec` is measured and
+`cost_usd` comes from the API's own usage fields, priced per turn at the
+model that actually served it (`PRICES` in `claude_driver.py`, checked
+2026-09-22; an unrecognized model id yields a null cost rather than a wrong
+one). A per-program failure is logged and skipped, not fatal to the batch.
+
+Two flags worth knowing: `--max-repairs` (default 2) re-asks with the
+validation errors when the JSON misses the schema, and records
+`repair_turns`; `--no-fallbacks` disables the server-side refusal fallback
+if you would rather a policy decline fail loudly than be answered by a
+different model (`usage.models_served` records who answered either way).
 
 ## 2. The skill
 
@@ -39,7 +128,9 @@ convention: skills are discovered relative to where the project root is,
 not per-subfolder. This folder (`config3-frontier-skills/`) holds the
 scripts that skill calls (`sas_metadata.py`, `extract.py`,
 `header_extract.py`, `validate_dictionary.py`, `write_dictionary.py`,
-`push_to_oda.py`, `save_prediction.py`).
+`push_to_oda.py`, `save_prediction.py`), plus `claude_driver.py`, which
+hands a Claude model the first three of those as tools and then runs the
+rest itself.
 
 If you're using Claude Code, the skill triggers automatically on requests
 like "document this SAS program" or "build a data dictionary for X.sas".
@@ -47,21 +138,26 @@ Otherwise, read `SKILL.md` directly and follow its numbered steps by hand.
 
 ## 3. Python dependencies
 
+On this box everything runs under one interpreter, the venv that already
+has saspy:
+
 ```bash
-pip install -r requirements.txt   # saspy + pandas
+/internal/venvs/main/bin/python3 -m pip install anthropic   # saspy, pandas already present
 ```
 
-Only needed for steps 1 (`sas_metadata.py`) and 6 (`push_to_oda.py`) of the
-skill -- the actual authoring step needs nothing beyond Claude reading the
-file.
+Off this box: `pip install -r requirements.txt` (anthropic + saspy +
+pandas) into whichever interpreter you will run the scripts with.
 
-**Which interpreter runs those two steps.** On this box `saspy` lives in a
-separate venv (`/internal/venvs/main`) rather than in the notebook kernel,
-which is why the commands below name it explicitly. That path exists
-nowhere else, so the notebook detects it instead: it picks the venv when
-`import saspy` succeeds there and this notebook's own kernel otherwise.
-Off this box, just use whichever interpreter you ran the `pip install`
-with. Steps 2-5 and 7 need no saspy at all and run under any interpreter.
+`anthropic` is only for `claude_driver.py` (the API path, section 1b);
+`saspy` + `pandas` are only for steps 1 (`sas_metadata.py`) and 6
+(`push_to_oda.py`) of the skill. The interactive authoring step needs
+neither -- nothing beyond Claude reading the file.
+
+**Which interpreter.** The notebook and `claude_driver.py` both detect it
+the same way: `/internal/venvs/main/bin/python3` when `import saspy`
+succeeds there, otherwise the current kernel/interpreter
+(`claude_driver.py --sas-python` overrides). Steps 2-5 and 7 need no saspy
+and run under anything.
 
 ## 4. Setting up your SAS OnDemand for Academics (ODA) credentials
 
@@ -131,9 +227,10 @@ Two things config3 in particular has to get right here:
   as `(placeholder*)` instead of as a measurement.
 - **Cost is `not recorded`, not `$0`.** An interactive Claude Code session
   has no metered per-call cost, so leaving `--cost-usd` off is correct and
-  the table says so. If you drive config3 through the Anthropic API,
-  record the real number from the response's usage fields -- the plan asks
-  for actual cost, not an estimate.
+  the table says so. The API path (`claude_driver.py`) fills both columns
+  itself -- `elapsed_sec` measured, `cost_usd` computed per turn from the
+  response's own usage fields -- which is the plan's "actual cost, not an
+  estimate.
 
 Scoring writes a `.provenance.json` sidecar recording exactly which eval
 corpus was scored, and `--table` marks a row **STALE** rather than
@@ -145,7 +242,11 @@ predictions scored against the current gold read `0.79` variable F1 and
 Per the plan, also score config3 **twice** -- once with the
 `sas_metadata.py` ground truth allowed as a hallucination-check source
 (`--extra-source-dir`), once without -- and report the pair, rather than a
-single number that silently includes the tool-access advantage.
+single number that silently includes the tool-access advantage. The API
+path makes the second run a flag: `claude_driver.py --no-sas-tool` simply
+does not offer the ground-truth tool, and writes to its own preds
+directory so the two can't be pooled by accident. `--extra-source-dir`
+reads `<out>/metadata/` from the first run as-is.
 
 
 ## The asymmetry to report honestly

@@ -95,9 +95,19 @@ def harvest(sas, program_name, libname, run_attempted, exclude_pattern=None):
     --run) so its output datasets exist in this session."""
     lib_upper = libname.upper()
 
+    # This query's own output datasets live in WORK too, and dictionary.columns/
+    # dictionary.tables see them as they are being created -- so without this
+    # clause the harvest reports _SDGCOLS as one of the program's datasets, and
+    # the frontier model is handed a scratch table as if the program had
+    # produced it. Unconditional, and separate from --exclude-pattern: that one
+    # defaults to excluding nothing on purpose, because legacy SAS really does
+    # name real datasets with a leading underscore.
+    self_clause = " and memname not in ('_SDGCOLS', '_SDGTABS')"
+
     exclude_clause = ""
     if exclude_pattern:
         exclude_clause = " and memname not like '%s' escape '\\'" % exclude_pattern.replace("'", "''")
+    exclude_clause += self_clause
 
     sql = (
         "proc sql noprint;"
