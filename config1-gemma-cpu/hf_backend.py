@@ -98,8 +98,20 @@ def generate(messages, model_id, num_predict, revision="main", dtype="auto"):
     num_predict tokens (Ollama's own vocabulary for the same event, reused
     here so document_sas.py's --truncated handling needs no branching)."""
     tok, model = _load(model_id, revision, dtype)
-    ids = tok.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt")
-    attention_mask = torch.ones_like(ids)
+    # `apply_chat_template` returns a bare tensor on older transformers and a
+    # BatchEncoding (input_ids + attention_mask) on newer ones, where
+    # return_dict defaults to True. Accept both rather than pinning a version:
+    # the Colab session resolves whatever it resolves.
+    encoded = tok.apply_chat_template(messages, add_generation_prompt=True,
+                                      return_tensors="pt")
+    if isinstance(encoded, torch.Tensor):
+        ids = encoded
+        attention_mask = torch.ones_like(ids)
+    else:
+        ids = encoded["input_ids"]
+        attention_mask = encoded.get("attention_mask")
+        if attention_mask is None:
+            attention_mask = torch.ones_like(ids)
     with torch.no_grad():
         out = model.generate(
             ids, attention_mask=attention_mask,
