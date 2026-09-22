@@ -1,0 +1,2 @@
+[config1-gemma-cpu] wrote /internal/sas-doc-gen-project/testrun/predicted/config1-gemma-cpu.scores.jsonl (20 programs)
+[config1-gemma-cpu] wrote /internal/sas-doc-gen-project/testrun/predicted/config1-gemma-cpu.provenance.json (corpus gold_digest=f27fb0130faf)

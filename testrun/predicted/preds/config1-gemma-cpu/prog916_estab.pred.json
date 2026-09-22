@@ -1,0 +1,98 @@
+{
+  "program_summary": {
+    "description": "This program reads two raw input datasets, merges them on the key variables, filters the records using the threshold macro parameter, computes a rate variable and writes the result to the output library.",
+    "input_datasets": [
+      "d1",
+      "&lb..d2"
+    ],
+    "output_datasets": [
+      "o1"
+    ]
+  },
+  "macro_reference": [
+    {
+      "name": "estab_run",
+      "positional_params": [
+        "p"
+      ],
+      "keyword_params": [
+        {
+          "name": "lb",
+          "default": "work"
+        },
+        {
+          "name": "thr",
+          "default": "10"
+        }
+      ],
+      "purpose": "Wraps the whole job: joins the two input datasets, applies the threshold filter, derives the rate variable and writes the output dataset.",
+      "called_by": []
+    }
+  ],
+  "variable_dictionary": [
+    {
+      "name": "ESTID",
+      "dataset": "&lb..o1",
+      "type": "char",
+      "length": 12,
+      "label": "Establishment identifier",
+      "derivation": "Key variable read from the input data and carried through the join."
+    },
+    {
+      "name": "PER",
+      "dataset": "&lb..o1",
+      "type": "char",
+      "length": 6,
+      "label": "Reference period YYYYMM",
+      "derivation": "Taken from the input; filled from the macro parameter when blank."
+    },
+    {
+      "name": "SEP",
+      "dataset": "&lb..o1",
+      "type": "num",
+      "length": null,
+      "label": "Total separations",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "WGTF",
+      "dataset": "&lb..o1",
+      "type": "num",
+      "length": 8,
+      "label": "Final sampling weight",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "EMPL",
+      "dataset": "o1",
+      "type": "num",
+      "length": null,
+      "label": "Total employment level",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "JO",
+      "dataset": "&lb..o1",
+      "type": "num",
+      "length": 8,
+      "label": "Job openings count",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "HIR",
+      "dataset": "&lb..o1",
+      "type": "char",
+      "length": null,
+      "label": "Total hires",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "HIRR",
+      "dataset": "o1",
+      "type": "num",
+      "length": 8,
+      "label": "Total hires per 100 employees",
+      "derivation": "computed as round(100*HIR/EMPL, 0.01) when EMPL > 0, else set to missing."
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "program_name": "prog918_hhold.sas",
+  "program_summary": {
+    "description": "Builds an analysis-ready household file for a single interview month by merging the control file onto collected microdata, keeping households above a minimum person-count threshold, and computing a normalized person weight. Also averages weights and person counts by region into a review table.",
+    "input_datasets": [
+      "WORK.D1",
+      "WORK.D2"
+    ],
+    "output_datasets": [
+      "WORK.O1",
+      "WORK.AGG1"
+    ]
+  },
+  "macro_reference": [
+    {
+      "name": "hh_run",
+      "positional_params": [],
+      "keyword_params": [
+        {
+          "name": "p",
+          "default": ""
+        },
+        {
+          "name": "lb",
+          "default": "work"
+        },
+        {
+          "name": "thr",
+          "default": "5"
+        }
+      ],
+      "purpose": "Sorts and merges the control file D2 onto raw microdata D1, applies the person-count retention threshold, derives the person-weight rate, and writes WORK.O1 plus the by-region summary for interview month `p`.",
+      "called_by": [
+        "prog918_hhold.sas"
+      ]
+    }
+  ],
+  "variable_dictionary": [
+    {
+      "name": "HHID",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 10,
+      "label": "Household identifier",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "RGN",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 1,
+      "label": "Census region code",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "IMTH",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 6,
+      "label": "Interview month YYYYMM",
+      "derivation": "carried through from the input file when populated; if blank, backfilled from the &p macro variable at call time."
+    },
+    {
+      "name": "LFST",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 2,
+      "label": "Labor force status code",
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "INCB",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 2,
+      "label": "Reported income bracket code",
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "NPER",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Count of persons in household",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "PWGT",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Person-level weight",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "PRXF",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": null,
+      "label": "Proxy interview flag (Y/N)",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "PWGTR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Person-level weight per 100 persons in household",
+      "derivation": "computed as round(100*PWGT/NPER, 0.01) when NPER > 0, else set to missing."
+    },
+    {
+      "name": "RGN",
+      "dataset": "WORK.AGG1",
+      "type": "char",
+      "length": null,
+      "label": "Census region code",
+      "derivation": "grouping variable carried through from the class statement (RGN)."
+    },
+    {
+      "name": "PWGT",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": 8,
+      "label": "Person-level weight (mean across records)",
+      "derivation": "computed via PROC SUMMARY as the mean of this variable across records sharing the same RGN (name unchanged from the input -- the `mean=;` output statement was not given explicit new names)."
+    },
+    {
+      "name": "NPER",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": null,
+      "label": "Count of persons in household (mean across records)",
+      "derivation": "computed via PROC SUMMARY as the mean of this variable across records sharing the same RGN (name unchanged from the input -- the `mean=;` output statement was not given explicit new names)."
+    }
+  ]
+}

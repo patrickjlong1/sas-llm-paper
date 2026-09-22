@@ -187,9 +187,47 @@ config2-vs-config1 additionally changes the serving stack (bitsandbytes
 
 Each `.meta.json` records per-program wall clock, the **actual GPU name**
 read from `torch.cuda.get_device_properties` (not a prose description),
-and a `truncated` flag for generation that hit `--max-new` mid-JSON --
-those score as schema-invalid, so check how many before reading the
-schema-validity column as a statement about formatting ability.
+and the truncation record described next.
+
+### Truncation: check this before you read any score
+
+A generation cut off at `--max-new` stops mid-JSON. It does not parse, so
+no `.pred.json` is written, so `results/score.py` counts that program as
+**"no output produced"**: 0.00 on every metric, hallucination pinned to
+1.00. In the results table that is indistinguishable from a model that had
+nothing to say -- and it is a completely different finding.
+
+This is not hypothetical. The 2026-09-22 tuned run hit it on **15 of 20
+programs** at the old `--max-new 1200`, which dragged that row to 0.24
+variable F1 while the 5 programs it did finish scored ~0.97. The cause is
+specific to fine-tuning: the adapter learned to reproduce the training
+corpus's verbose gold format, and the eval programs carry more variables
+(12-15) than the training programs did (7-12), so the JSON runs longer
+than the base model's ever did.
+
+`infer.py` now handles it in three steps:
+
+| | default | what it does |
+|---|---|---|
+| `--max-new` | **2400** (was 1200) | generation stops at the model's own EOS, so unused headroom costs nothing |
+| `--retry-on-truncation` | **on** | a program that hits the cap is re-generated once at `--retry-factor` (2.0) x the budget. The model writes the whole answer itself |
+| `--salvage-truncated` | **off** | closes a still-truncated JSON at its last complete element, so a nearly-finished dictionary scores as partial credit instead of zero |
+
+Keep `--salvage-truncated` off for a headline number. It is a harness
+repair that config1's `document_sas.py` has no equivalent of, so a run
+using it cannot have its schema-validity column compared with config1's.
+Salvaged predictions carry `"salvaged": true` and a `salvage_note` in
+their `.meta.json`, and the run prints a warning saying exactly this.
+
+The end of every run now prints a coverage line:
+
+```
+20/20 produced parseable JSON (3 needed the retry, 0 salvaged)
+```
+
+If that line shows programs lost to truncation, raise `--max-new` and
+re-run **before** scoring. A truncation-limited row is a budget artifact,
+not a measurement of the model.
 
 `--gpu-usd-per-hour` turns the results table's "cost per program" into a
 measured number instead of a hardcoded zero. `0.0` is correct on Colab's

@@ -1,0 +1,134 @@
+{
+  "program_name": "prog913_estab.sas",
+  "program_summary": {
+    "description": "Builds an analysis-ready establishment file for a single reference period by merging the control file onto collected microdata, keeping establishments above a minimum weight threshold, and computing a job openings rate per 100 employees. Also sums openings and separations by state into a review table.",
+    "input_datasets": [
+      "WORK.D1",
+      "WORK.D2"
+    ],
+    "output_datasets": [
+      "WORK.O1",
+      "WORK.AGG1"
+    ]
+  },
+  "macro_reference": [
+    {
+      "name": "mkest",
+      "positional_params": [
+        "p"
+      ],
+      "keyword_params": [
+        {
+          "name": "lb",
+          "default": "work"
+        },
+        {
+          "name": "thr",
+          "default": "5"
+        }
+      ],
+      "purpose": "Sorts and merges the control file D2 onto raw microdata D1, applies the weight retention threshold, derives the job openings rate per 100 employees, and writes WORK.O1 plus the by-state summary for reference period `p`.",
+      "called_by": [
+        "prog913_estab.sas"
+      ]
+    }
+  ],
+  "variable_dictionary": [
+    {
+      "name": "ESTID",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 12,
+      "label": "Establishment identifier",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "ST",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 2,
+      "label": "State FIPS code",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "PER",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 6,
+      "label": "Reference period YYYYMM",
+      "derivation": "carried through from the input file when populated; if blank, backfilled from the &p macro variable at call time."
+    },
+    {
+      "name": "JO",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Job openings count",
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "SEP",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total separations",
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "RSPF",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 1,
+      "label": "Response status flag (R/N/P)",
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "EMPL",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total employment level",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "WGTF",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Final sampling weight",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "JOR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Job openings per 100 employees",
+      "derivation": "computed as round(100*JO/EMPL, 0.01) when EMPL > 0, else set to missing."
+    },
+    {
+      "name": "ST",
+      "dataset": "WORK.AGG1",
+      "type": "char",
+      "length": 2,
+      "label": "State FIPS code",
+      "derivation": "grouping variable carried through from the class statement (ST)."
+    },
+    {
+      "name": "JO",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": 8,
+      "label": "Job openings count (sum across records)",
+      "derivation": "computed via PROC SUMMARY as the sum of this variable across records sharing the same ST (name unchanged from the input -- the `sum=;` output statement was not given explicit new names)."
+    },
+    {
+      "name": "SEP",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": null,
+      "label": "Total separations (sum across records)",
+      "derivation": "computed via PROC SUMMARY as the sum of this variable across records sharing the same ST (name unchanged from the input -- the `sum=;` output statement was not given explicit new names)."
+    }
+  ]
+}

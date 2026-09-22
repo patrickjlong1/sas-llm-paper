@@ -1,0 +1,3 @@
+[config3-frontier-skills] wrote config3-frontier-skills.scores.jsonl (20 programs)
+[config3-frontier-skills] wrote config3-frontier-skills.provenance.json (corpus gold_digest=f27fb0130faf)
+[config3-frontier-skills] hallucination check also allowed 20/20 programs' real SAS metadata from metadata as a valid source

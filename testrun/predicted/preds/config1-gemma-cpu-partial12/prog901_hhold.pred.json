@@ -1,0 +1,121 @@
+{
+  "program_summary": {
+    "description": "This program reads two raw input datasets, merges them on the key variables, filters the records using the threshold macro parameter, computes a rate variable and writes the result to the output library.",
+    "input_datasets": [
+      "D1",
+      "D2",
+      "D3"
+    ],
+    "output_datasets": [
+      "o1"
+    ]
+  },
+  "macro_reference": [
+    {
+      "name": "hh_core",
+      "positional_params": [],
+      "keyword_params": [
+        {
+          "name": "p",
+          "default": ""
+        },
+        {
+          "name": "lb",
+          "default": "work"
+        }
+      ],
+      "purpose": "Wraps the whole job: joins the two input datasets, applies the threshold filter, derives the rate variable and writes the output dataset.",
+      "called_by": []
+    }
+  ],
+  "variable_dictionary": [
+    {
+      "name": "HHID",
+      "dataset": "O1",
+      "type": "char",
+      "length": 10,
+      "label": "Household identifier",
+      "derivation": "Key variable read from the input data and carried through the join."
+    },
+    {
+      "name": "RGN",
+      "dataset": "O1",
+      "type": "char",
+      "length": 1,
+      "label": "Census region code",
+      "derivation": "Key variable read from the input data and carried through the join."
+    },
+    {
+      "name": "IMTH",
+      "dataset": "o1",
+      "type": "char",
+      "length": 8,
+      "label": "Interview month YYYYMM",
+      "derivation": "Taken from the input; filled from the macro parameter when blank."
+    },
+    {
+      "name": "NPER",
+      "dataset": "o1",
+      "type": "char",
+      "length": null,
+      "label": "Count of persons in household",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "PWGT",
+      "dataset": "&lb..o1",
+      "type": "char",
+      "length": null,
+      "label": "Person-level weight",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "UHRS",
+      "dataset": "&lb..o1",
+      "type": "num",
+      "length": 8,
+      "label": "Usual weekly hours worked",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "LFST",
+      "dataset": "o1",
+      "type": "char",
+      "length": 2,
+      "label": "Labor force status code",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "INCB",
+      "dataset": "O1",
+      "type": "num",
+      "length": 8,
+      "label": "Reported income bracket code",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "PRXF",
+      "dataset": "o1",
+      "type": "char",
+      "length": 1,
+      "label": "Proxy interview flag",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "P_NPER",
+      "dataset": "O1",
+      "type": "num",
+      "length": 8,
+      "label": "Prior-period count of persons",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "NPDIF",
+      "dataset": "o1",
+      "type": "num",
+      "length": null,
+      "label": "Count of persons change vs prior period",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    }
+  ]
+}

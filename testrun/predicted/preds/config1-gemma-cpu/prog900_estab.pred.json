@@ -1,0 +1,122 @@
+{
+  "program_summary": {
+    "description": "This program reads two raw input datasets, merges them on the key variables, filters the records using the threshold macro parameter, computes a rate variable and writes the result to the output library.",
+    "input_datasets": [
+      "WORK.D1",
+      "WORK.D2"
+    ],
+    "output_datasets": [
+      "WORK.O1",
+      "WORK.AGG1"
+    ]
+  },
+  "macro_reference": [
+    {
+      "name": "est_report",
+      "positional_params": [
+        "p"
+      ],
+      "keyword_params": [
+        {
+          "name": "lb",
+          "default": "WORK"
+        },
+        {
+          "name": "thr",
+          "default": "0"
+        }
+      ],
+      "purpose": "Wraps the whole job: joins the two input datasets, applies the threshold filter, derives the rate variable and writes the output dataset.",
+      "called_by": []
+    },
+    {
+      "name": "dt",
+      "positional_params": [],
+      "keyword_params": [],
+      "purpose": "Macro variable holding the hardcoded reference period.",
+      "called_by": []
+    }
+  ],
+  "variable_dictionary": [
+    {
+      "name": "ST",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 8,
+      "label": "State FIPS code",
+      "derivation": "Key variable read from the input data and carried through the join."
+    },
+    {
+      "name": "PER",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 6,
+      "label": "Reference period YYYYMM",
+      "derivation": "Taken from the input; filled from the macro parameter when blank."
+    },
+    {
+      "name": "SEP",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total separations",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "JO",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Job openings count",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "HIR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": null,
+      "label": "Total hires",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "WGTF",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Final sampling weight",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "SEPR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": null,
+      "label": "Total separations per 100 employees",
+      "derivation": "computed as round(100*SEP/EMPL, 0.01) when EMPL > 0, else set to missing."
+    },
+    {
+      "name": "ST",
+      "dataset": "WORK.AGG1",
+      "type": "char",
+      "length": 2,
+      "label": "State FIPS code",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "SEP",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": null,
+      "label": "Total separations",
+      "derivation": "Aggregated value produced by the PROC SUMMARY step."
+    },
+    {
+      "name": "HIR",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": 8,
+      "label": "Total hires",
+      "derivation": "Aggregated value produced by the PROC SUMMARY step."
+    }
+  ]
+}

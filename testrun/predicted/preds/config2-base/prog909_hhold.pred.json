@@ -1,0 +1,95 @@
+{
+  "program_summary": {
+    "description": "This program reads two raw input datasets, merges them on the key variables, filters the records using the threshold macro parameter, computes a rate variable and writes the result to the output library.",
+    "input_datasets": [
+      "d1",
+      "d2"
+    ],
+    "output_datasets": [
+      "o1"
+    ]
+  },
+  "macro_reference": [
+    {
+      "name": "hh_sched",
+      "positional_params": [],
+      "keyword_params": [
+        {
+          "name": "p",
+          "default": ""
+        },
+        {
+          "name": "lb",
+          "default": "work"
+        }
+      ],
+      "purpose": "Wraps the whole job: joins the two input datasets, applies the threshold filter, derives the rate variable and writes the output dataset.",
+      "called_by": []
+    },
+    {
+      "name": "dt",
+      "positional_params": [],
+      "keyword_params": [],
+      "purpose": "Macro variable holding the hardcoded reference period.",
+      "called_by": []
+    }
+  ],
+  "variable_dictionary": [
+    {
+      "name": "HHID",
+      "dataset": "&lb..o1",
+      "type": "char",
+      "length": 8,
+      "label": "Household identifier",
+      "derivation": "Key variable read from the input data and carried through the join."
+    },
+    {
+      "name": "RGN",
+      "dataset": "o1",
+      "type": "char",
+      "length": 1,
+      "label": "Census region code",
+      "derivation": "Key variable read from the input data and carried through the join."
+    },
+    {
+      "name": "IMTH",
+      "dataset": "&lb..o1",
+      "type": "char",
+      "length": 6,
+      "label": "Interview month YYYYMM",
+      "derivation": "Taken from the input; filled from the macro parameter when blank."
+    },
+    {
+      "name": "INCB",
+      "dataset": "o1",
+      "type": "char",
+      "length": 2,
+      "label": "Reported income bracket code",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "LFST",
+      "dataset": "&lb..o1",
+      "type": "char",
+      "length": 2,
+      "label": "Labor force status code",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "UHRS",
+      "dataset": "&lb..o1",
+      "type": "num",
+      "length": null,
+      "label": "Usual weekly hours worked",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "NPERR",
+      "dataset": "o1",
+      "type": "num",
+      "length": 8,
+      "label": "Count of persons per 100 usual hours worked",
+      "derivation": "computed as round(100*NPER/UHRS, 0.01) when UHRS > 0, else set to missing."
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "program_summary": {
+    "description": "This program reads two raw input datasets, merges them on the key variables, filters the records using the threshold macro parameter, computes a rate variable and writes the result to the output library.",
+    "input_datasets": [
+      "D1",
+      "&lb..d2"
+    ],
+    "output_datasets": [
+      "o1"
+    ]
+  },
+  "macro_reference": [
+    {
+      "name": "cost_lib",
+      "positional_params": [],
+      "keyword_params": [
+        {
+          "name": "p",
+          "default": ""
+        },
+        {
+          "name": "lb",
+          "default": "work"
+        },
+        {
+          "name": "thr",
+          "default": "10"
+        },
+        {
+          "name": "dbg",
+          "default": "0"
+        }
+      ],
+      "purpose": "Wraps the whole job: joins the two input datasets, applies the threshold filter, derives the rate variable and writes the output dataset.",
+      "called_by": []
+    },
+    {
+      "name": "dt",
+      "positional_params": [],
+      "keyword_params": [],
+      "purpose": "Macro variable holding the hardcoded reference period.",
+      "called_by": []
+    }
+  ],
+  "variable_dictionary": [
+    {
+      "name": "QTR",
+      "dataset": "o1",
+      "type": "char",
+      "length": 6,
+      "label": "Quarter label YYYYQn",
+      "derivation": "Taken from the input; filled from the macro parameter when blank."
+    },
+    {
+      "name": "TCOMP",
+      "dataset": "&lb..o1",
+      "type": "num",
+      "length": 8,
+      "label": "Total compensation cost",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "WCOST",
+      "dataset": "&lb..o1",
+      "type": "num",
+      "length": 8,
+      "label": "Wage and salary cost",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "HRSP",
+      "dataset": "&lb..o1",
+      "type": "num",
+      "length": null,
+      "label": "Total hours paid",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "BCOST",
+      "dataset": "&lb..o1",
+      "type": "num",
+      "length": 8,
+      "label": "Benefit cost",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "OWGT",
+      "dataset": "O1",
+      "type": "num",
+      "length": null,
+      "label": "Occupation-level weight",
+      "derivation": "Read from the input data and carried through to the output dataset."
+    },
+    {
+      "name": "BCOSTR",
+      "dataset": "o1",
+      "type": "num",
+      "length": null,
+      "label": "Benefit cost as a percent of total compensation",
+      "derivation": "computed as round(100*BCOST/TCOMP, 0.01) when TCOMP > 0, else set to missing."
+    },
+    {
+      "name": "_TYPE_",
+      "dataset": "O1",
+      "type": "num",
+      "length": 8,
+      "label": "Merge/flag column",
+      "derivation": "Intermediate column used by the merge step."
+    },
+    {
+      "name": "OBSDATE",
+      "dataset": "O1",
+      "type": "char",
+      "length": 8,
+      "label": "Observation date",
+      "derivation": "Date the record was produced."
+    }
+  ]
+}

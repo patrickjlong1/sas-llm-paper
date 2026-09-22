@@ -1,0 +1,14 @@
+[
+  {"label": "Config 1: Gemma CPU zero-shot (gemma-3-4b-it) [SIMULATED]",
+   "scores_patterns": ["config1-gemma-cpu.scores.jsonl"], "meta_dir": "preds/config1-gemma-cpu"},
+  {"label": "Config 1: same run, stopped at 12/20 programs [SIMULATED]",
+   "scores_patterns": ["config1-gemma-cpu-partial12.scores.jsonl"], "meta_dir": "preds/config1-gemma-cpu-partial12"},
+  {"label": "Config 2: base, no adapter (4-bit, A100) [SIMULATED]",
+   "scores_patterns": ["config2-base.scores.jsonl"], "meta_dir": "preds/config2-base"},
+  {"label": "Config 2: QLoRA-tuned (+ sasdoc-lora, A100) [SIMULATED]",
+   "scores_patterns": ["config2-tuned.scores.jsonl"], "meta_dir": "preds/config2-tuned"},
+  {"label": "Config 3: Claude + SAS ground truth [SIMULATED preds, REAL metadata]",
+   "scores_patterns": ["config3/config3-frontier-skills.scores.jsonl"], "meta_dir": "config3/preds/config3-frontier-skills"},
+  {"label": "Config 3: Claude, --no-sas-tool [SIMULATED]",
+   "scores_patterns": ["config3/config3-frontier-skills-nogt.scores.jsonl"], "meta_dir": "config3/preds/config3-frontier-skills-nogt"}
+]

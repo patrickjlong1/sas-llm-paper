@@ -1,0 +1,190 @@
+{
+  "program_name": "prog907_estcost.sas",
+  "program_summary": {
+    "description": "Builds an analysis-ready reporting unit file for a single quarter by merging the control file onto collected cost microdata, retaining units above a minimum wage-cost threshold, and computing wage cost as a percent of total compensation. Also sums benefits and occupation weights by industry into a review table.",
+    "input_datasets": [
+      "WORK.D1",
+      "WORK.D2"
+    ],
+    "output_datasets": [
+      "WORK.O1",
+      "WORK.AGG1"
+    ]
+  },
+  "macro_reference": [
+    {
+      "name": "ccost_rpt",
+      "positional_params": [
+        "p"
+      ],
+      "keyword_params": [
+        {
+          "name": "lb",
+          "default": "work"
+        },
+        {
+          "name": "thr",
+          "default": "10"
+        }
+      ],
+      "purpose": "Joins the control file D2 onto raw cost microdata, applies the wage-cost retention threshold, derives the wage share of total compensation, and writes WORK.O1 plus the by-industry summary for quarter `p`.",
+      "called_by": [
+        "prog907_estcost.sas"
+      ]
+    }
+  ],
+  "variable_dictionary": [
+    {
+      "name": "RUID",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 14,
+      "label": "Reporting unit identifier",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "IND",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 6,
+      "label": "Industry classification code",
+      "derivation": "carried through unchanged from the merged input datasets (join key)."
+    },
+    {
+      "name": "QTR",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 6,
+      "label": "Quarter label YYYYQn",
+      "derivation": "carried through from the input file when populated; if blank, backfilled from the &p macro variable at call time."
+    },
+    {
+      "name": "BCOST",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Benefit cost",
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "OWGT",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Occupation-level weight",
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "WCOST",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Wage and salary cost",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "TCOMP",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total compensation cost",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "HRSP",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total hours paid",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "EDTF",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 1,
+      "label": "Edit action flag (A/E/I)",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "WCOSTR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Wage and salary cost as a percent of total compensation",
+      "derivation": "computed as round(100*WCOST/TCOMP, 0.01) when TCOMP > 0, else set to missing."
+    },
+    {
+      "name": "IND",
+      "dataset": "WORK.AGG1",
+      "type": "char",
+      "length": null,
+      "label": "Industry classification code",
+      "derivation": "grouping variable carried through from the class statement (IND)."
+    },
+    {
+      "name": "BCOST",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": 8,
+      "label": "Benefit cost (sum across records)",
+      "derivation": "computed via PROC SUMMARY as the sum of this variable across records sharing the same IND (name unchanged from the input -- the `sum=;` output statement was not given explicit new names)."
+    },
+    {
+      "name": "OWGT",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": null,
+      "label": "Occupation-level weight (sum across records)",
+      "derivation": "computed via PROC SUMMARY as the sum of this variable across records sharing the same IND (name unchanged from the input -- the `sum=;` output statement was not given explicit new names)."
+    },
+    {
+      "name": "RUID",
+      "dataset": "WORK.J1",
+      "type": "char",
+      "length": 14,
+      "label": "Reporting unit identifier",
+      "derivation": "Staging column materialized by the macro's intermediate step (inferred from the source text)."
+    },
+    {
+      "name": "IND",
+      "dataset": "WORK.J1",
+      "type": "char",
+      "length": 6,
+      "label": "Industry classification code",
+      "derivation": "Staging column materialized by the macro's intermediate step (inferred from the source text)."
+    },
+    {
+      "name": "QTR",
+      "dataset": "WORK.J1",
+      "type": "char",
+      "length": 6,
+      "label": "Quarter label YYYYQn",
+      "derivation": "Staging column materialized by the macro's intermediate step (inferred from the source text)."
+    },
+    {
+      "name": "BCOST",
+      "dataset": "WORK.J1",
+      "type": "num",
+      "length": 8,
+      "label": "Benefit cost",
+      "derivation": "Staging column materialized by the macro's intermediate step (inferred from the source text)."
+    },
+    {
+      "name": "OWGT",
+      "dataset": "WORK.J1",
+      "type": "num",
+      "length": 8,
+      "label": "Occupation-level weight",
+      "derivation": "Staging column materialized by the macro's intermediate step (inferred from the source text)."
+    },
+    {
+      "name": "WCOST",
+      "dataset": "WORK.J1",
+      "type": "num",
+      "length": 8,
+      "label": "Wage and salary cost",
+      "derivation": "Staging column materialized by the macro's intermediate step (inferred from the source text)."
+    }
+  ]
+}

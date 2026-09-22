@@ -1,0 +1,71 @@
+{
+  "written_utc": "2026-09-22T10:05:18+00:00",
+  "config": "config2-tuned",
+  "corpus": {
+    "gold_dir": "../eval-programs/gold",
+    "source_dir": "../eval-programs/programs",
+    "n_gold": 20,
+    "n_source": 20,
+    "gold_digest": "f27fb0130fafddf6af5f9dbc8f10098a0a9adbfdc84076de5684e7aa85f0148e",
+    "source_digest": "6a054681a14810ae8213109f54e56f1012e65bfde762b2b4b7f97e7cc009bec0",
+    "schema_sha256": "ff49d80ba5c8a3944d996b3fb1769366c62c0404624d61ea616e5f22dd2f4e82",
+    "gold_files": {
+      "prog900_estab.gold.json": "fcefb14e4ffdcd19e2151bca4fdb7277075f819d13ab2c74efe42f20430ae0d1",
+      "prog901_hhold.gold.json": "66c14f54b00d68865f26b05514a780a248792011d4691c2f3882709d6021e275",
+      "prog902_estcost.gold.json": "de7f3e285834fe06c8888490e6ef53973e8a423de54a7d2fbd5069249c9fb9b0",
+      "prog903_estcost.gold.json": "11736e79ce526c377573aaa79f90c522ebd013ff5ec0621c5d5ea2bdde647ac2",
+      "prog904_hhold.gold.json": "fe1c362c68106d9c408112667aac204158c769bf464757974987654828aeac5c",
+      "prog905_estcost.gold.json": "ec5333c57697656dba4f6bb1d4580251cd14a1d590c0f056a9df125fd4c75224",
+      "prog906_estcost.gold.json": "b2c0320874fb09ebe375878ab8aeb0d5d0e6dfaf02a7665f79e291679a3ae885",
+      "prog907_estcost.gold.json": "f6a3171171bf299d7e607ad4e111d36fd4a11c3b632b4f2c7cf20883f52a98e3",
+      "prog908_estcost.gold.json": "eef69cc629ead236e11bcfb2d3357e17c7862d256a557920a39cda50b30f989b",
+      "prog909_hhold.gold.json": "035efb62f48fade001dd16912788c5518f5269fc930cfd21d8808d3703c571be",
+      "prog910_estab.gold.json": "8389183a114e2672107baa3e4ab4717b884458911bcaafda419677e01603de2d",
+      "prog911_estab.gold.json": "6a9056a8a00385b4b6a5051b80584736b915d56c93e2d1f62ea29ad7d9ca007c",
+      "prog912_estab.gold.json": "4dfb1849538fd0f21e87c620b205c2dde3d347c52f31ebf6852acc49e5be901b",
+      "prog913_estab.gold.json": "f8127a32da850f9cc42198f5d9d9e77ff6f56675fc0fb0adde83daa9f188a6b1",
+      "prog914_hhold.gold.json": "f5d22bea819e28c52cbbbdbdaac64a9826947d98bf323e5153627e6f307fbadc",
+      "prog915_estab.gold.json": "0f16aff4176c511489406fe4ee5ca917d0b4164c438e61478415ad2c60175a5f",
+      "prog916_estab.gold.json": "325a216b0a6be098931c80df9eeb6c1fbbea0df52a987477343fb65d7cefbf1a",
+      "prog917_hhold.gold.json": "4b67c5362d2a314a7b6d27fcc2af7be057ad81b48ce169ce55be787c8e1c150c",
+      "prog918_hhold.gold.json": "3625c103fda543f04e34fb68699b224f1bfb3180921aecd4784eb4b9552c7265",
+      "prog919_estab.gold.json": "33287cefa80334006db6392d435a50f0c80b2d1d503fde2996b276041729b37f"
+    },
+    "source_files": {
+      "prog900_estab.sas": "360c17e2b252967f1fbb41d1ac40bfb5dcef7cfca42cf262740743f0bb4e8f31",
+      "prog901_hhold.sas": "89695939a8edeac75791e8b151ba83c7df55fa795f8d598412c8899082504a96",
+      "prog902_estcost.sas": "9eca3d6e53551d9fb863cd51b01b8f42d2ac09beb61f86c7e942c5fdf83a8776",
+      "prog903_estcost.sas": "c419cfe2610c520839e3b96f04c3d8b223766e26dc4a41f2f138a3de88c23e5c",
+      "prog904_hhold.sas": "905b1d6bc24dead1b780f923d4dd8c8dc59cf1dfcdfc66075af21f7c4c0d1383",
+      "prog905_estcost.sas": "ff029aaa538ce2ca113721ebe427a56306c4fc7b652ebdfec5aa7f7aa26696a6",
+      "prog906_estcost.sas": "e9f170b4f3d20c2b5593a2fc7c0382379f0fa3ce447661a835dedb40bd98378c",
+      "prog907_estcost.sas": "d56a83198e478cdb92d01d946b5dcaccdd250e07d4a362a59535bdd535d5b5fa",
+      "prog908_estcost.sas": "bb3543a9c691edb4ae78fe9b09c4184347917e404d950f5cb4366048dd6783e3",
+      "prog909_hhold.sas": "76a40e5db1d8c7657594024ef4332b8dba108a38d595f9f799e957334bf16d09",
+      "prog910_estab.sas": "b4c2c30e849f9d362e3d0fcf2703d966e87970ff5b53a506e317acbc3d9810ac",
+      "prog911_estab.sas": "1116beceb38f85af08b8f6499af40d5aab3645aa01a6cea8effb271491555b2c",
+      "prog912_estab.sas": "58c2d04e13541ade41ff6c148b04ff4466d50a62fb6624d6f5bed842e95c5bd9",
+      "prog913_estab.sas": "09e7470e109af661e7d39ce2982a6d70c398aa38b2f022e425b397a8326a11cb",
+      "prog914_hhold.sas": "23af47bda780147d8a379ace8201421d2bddf7ca0e57676091e521e2ea213fc6",
+      "prog915_estab.sas": "070fd48b7bdb490f0a552881e09d445cc05b407c41a64441b0b4fdaa3c7cf85c",
+      "prog916_estab.sas": "347af794728d8a5f7a4ab894af7cc2b42ba98c5012da98449f349554bc22d1c8",
+      "prog917_hhold.sas": "741e9be6c6dcf262760d5937cd204bbcf98aa11662becc1ba27b0758abb1cab8",
+      "prog918_hhold.sas": "fe7da64203414203f82a37fb8629f64cf90ddafe164aa06c6b37c165c2ead616",
+      "prog919_estab.sas": "856a427dcde84bf9ab49d76b09fcf66d299e440a4bb47daead69486a30f13e22"
+    }
+  },
+  "predictions": {
+    "pred_dir": "../testrun/predicted/preds/config2-tuned",
+    "n_pred": 5,
+    "pred_digest": "dd275d76233b53f6006b852e01139d24d60dd7d2176bd451c5001c6cf2627425",
+    "pred_files": {
+      "prog900_estab.pred.json": "41d8885331d35ae2c1ffdbe0d1a96586a18c1e47b522b9868858dc2a7a2fa7cf",
+      "prog910_estab.pred.json": "4fffb02a89cdd61b69b848ad61e0e1e8eb6e203a27932f6168dfb41d779614fc",
+      "prog914_hhold.pred.json": "a5dc0b3621adbc829452090de2f128da52ba30b4541eac518f02177f4ec435a7",
+      "prog918_hhold.pred.json": "56a4b974c2ae48031bb4be7b3c55f7fa6910037ea73efe7c87764cf0e3fad4d5",
+      "prog919_estab.pred.json": "0f0a93e9ad6698f86de17c8f6825fb4387d272ad1297fd52baff6be68649a65e"
+    }
+  },
+  "notes": "PREDICTED RUN -- the .pred.json files fingerprinted here were SIMULATED by testrun/predicted/predict_run_outputs.py, not generated by a model. The eval-corpus fingerprint is real. Do not publish these numbers as measurements.",
+  "simulated_predictions": true
+}
