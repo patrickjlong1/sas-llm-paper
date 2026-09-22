@@ -149,8 +149,12 @@ def main():
     # teaches the model to stop mid-dictionary, the single most common way this
     # experiment fails.
     def fits(rec):
-        ids = tok.apply_chat_template(to_chat(rec, tok)["messages"], tokenize=True)
-        return len(ids) <= args.maxlen
+        # return_dict=True explicitly: newer transformers default to it anyway,
+        # and a bare len() over the returned BatchEncoding counts keys (2), not
+        # tokens, which silently disables this filter.
+        enc = tok.apply_chat_template(to_chat(rec, tok)["messages"], tokenize=True,
+                                      return_dict=True)
+        return len(enc["input_ids"]) <= args.maxlen
 
     kept = [r for r in train_recs if fits(r)]
     print("train: kept %d / %d at maxlen=%d" % (len(kept), len(train_recs), args.maxlen))

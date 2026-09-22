@@ -117,16 +117,18 @@ def main():
         source = open(path).read()
         msgs = [{"role": "system", "content": SYSTEM},
                 {"role": "user", "content": "```sas\n" + source + "\n```"}]
-        ids = tok.apply_chat_template(msgs, add_generation_prompt=True,
+        enc = tok.apply_chat_template(msgs, add_generation_prompt=True,
+                                      return_dict=True,
                                       return_tensors="pt").to(model.device)
+        prompt_len = enc["input_ids"].shape[-1]
 
         t0 = time.time()
         with torch.no_grad():
-            gen = model.generate(ids, max_new_tokens=args.max_new,
+            gen = model.generate(**enc, max_new_tokens=args.max_new,
                                  do_sample=False, pad_token_id=tok.eos_token_id)
         elapsed = time.time() - t0
 
-        raw = tok.decode(gen[0][ids.shape[-1]:], skip_special_tokens=True)
+        raw = tok.decode(gen[0][prompt_len:], skip_special_tokens=True)
         doc_json, parse_err = _parse_json(raw)
 
         with open(os.path.join(args.out, base + ".raw.txt"), "w") as fh:
@@ -140,7 +142,7 @@ def main():
                       "cost_usd": round(elapsed / 3600.0 * args.gpu_usd_per_hour, 6),
                       "gpu_usd_per_hour": args.gpu_usd_per_hour,
                       "hardware": hardware, "max_new_tokens": args.max_new,
-                      "truncated": gen.shape[-1] - ids.shape[-1] >= args.max_new,
+                      "truncated": gen.shape[-1] - prompt_len >= args.max_new,
                       "parse_error": parse_err}, fh, indent=2)
 
         print("done", base, "(%.1fs%s)" % (elapsed, ", PARSE ERROR" if parse_err else ""))
