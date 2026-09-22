@@ -13,15 +13,16 @@ each bootstrap resample draws one (program, run) pair per program per
 resample, so the CI reflects both sources of variance.
 
 Usage:
-    python3 bootstrap_ci.py --runs outputs/config1_run1.scores.jsonl \
-        outputs/config1_run2.scores.jsonl outputs/config1_run3.scores.jsonl \
+    python3 bootstrap_ci.py --runs outputs/config1-gemma-cpu_run1.scores.jsonl \
+        outputs/config1-gemma-cpu_run2.scores.jsonl outputs/config1-gemma-cpu_run3.scores.jsonl \
         --metric variable_f1
-    python3 bootstrap_ci.py --runs outputs/config1_run*.scores.jsonl --all-metrics
+    python3 bootstrap_ci.py --runs outputs/config1-gemma-cpu_run*.scores.jsonl --all-metrics
 """
 
 import argparse
 import glob
 import json
+import os
 import random
 from statistics import mean
 
@@ -30,17 +31,33 @@ METRICS = ("schema_valid", "variable_f1", "macro_param_f1", "io_dataset_f1",
           "macro_default_exact", "called_by_f1")
 
 
+def matching_paths(patterns):
+    """Expand score-file patterns to real paths.
+
+    A pattern that matches nothing is skipped rather than opened as a literal
+    filename -- run_eval.py --table is routinely pointed at a rows.json
+    listing all four configs when only some of them have been run yet, and a
+    FileNotFoundError traceback there says much less than an empty row."""
+    paths = []
+    for pattern in patterns or []:
+        hits = sorted(glob.glob(pattern))
+        if hits:
+            paths.extend(hits)
+        elif os.path.exists(pattern):
+            paths.append(pattern)
+    return paths
+
+
 def load_runs(patterns):
     """Returns {program_name: [row_run1, row_run2, ...]}."""
     by_program = {}
-    for pattern in patterns:
-        for path in sorted(glob.glob(pattern)) or [pattern]:
-            with open(path) as fh:
-                for line in fh:
-                    if not line.strip():
-                        continue
-                    row = json.loads(line)
-                    by_program.setdefault(row["program_name"], []).append(row)
+    for path in matching_paths(patterns):
+        with open(path) as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                by_program.setdefault(row["program_name"], []).append(row)
     return by_program
 
 

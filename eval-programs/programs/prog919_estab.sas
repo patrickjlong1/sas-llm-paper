@@ -1,66 +1,56 @@
-options mlogic nomprint;
+options nomprint nosymbolgen;
 libname xin '/sasdata/arch/estab';
-%let dt=201708;
+%let dt=202104;
 
 data d1;
-  length ESTID $12 ST $2 PER $6 EMPL 8 HIR 8;
+  length ESTID $12 ST $2 PER $6 EMPL 8 HIR 8 JO 8;
   infile datalines dsd truncover;
-  input ESTID $ ST $ PER $ EMPL HIR;
+  input ESTID $ ST $ PER $ EMPL HIR JO;
   datalines;
-  EST0001,01,201708,297.28,265.69
-  EST0002,06,201708,808.07,409.23
-  EST0003,02,201708,364.57,329.41
-  EST0004,11,201708,855.82,702.39
+  EST0001,01,202104,99.61,487.27,379.62
+  EST0002,06,202104,759.23,55.70,585.44
+  EST0003,02,202104,320.48,730.06,21.14
+  EST0004,11,202104,503.70,170.85,771.08
   ;
 run;
 
 data d2;
-  length ESTID $12 ST $2 SEP 8 RSPF $1;
+  length ESTID $12 ST $2 SEP 8 RSPF $1 WGTF 8;
   infile datalines dsd truncover;
-  input ESTID $ ST $ SEP RSPF $;
+  input ESTID $ ST $ SEP RSPF $ WGTF;
   datalines;
-  EST0001,01,658.86,I
-  EST0002,06,439.05,E
-  EST0003,02,668.43,P
-  EST0004,11,372.16,Y
+  EST0001,01,82.30,P,631.27
+  EST0002,06,769.48,R,413.08
+  EST0003,02,337.95,N,741.65
+  EST0004,11,161.24,N,52.94
   ;
 run;
 
-%macro bldout5(p=, lb=work, dbg=0);
-proc sort data=d1 out=_sd1; by ESTID ST; run;
-proc sort data=d2 out=_sd2; by ESTID ST; run;
-data _t1;
-  merge _sd1(in=i1) _sd2(in=i2);
+%macro build_est(p=, lb=work, dbg=0);
+proc sort data=d1 out=s_d1; by ESTID ST; run;
+proc sort data=d2 out=s_d2; by ESTID ST; run;
+
+data base;
+  merge s_d1(in=i1) s_d2(in=i2);
   by ESTID ST;
   if i1;
-  if PER = '' then PER = "&dt";
+  if PER = '' then PER = "&p";
+  if EMPL > 0 then SEPR = round(100*SEP/EMPL, 0.01);
+  else SEPR = .;
 run;
 
-proc transpose data=_t1 out=_x2 prefix=v;
-  by ESTID;
-  var EMPL;
-run;
-data _t2; set _t1; run;
-
-proc summary data=_t2 nway;
+proc summary data=base nway;
   class ST;
-  var EMPL HIR;
-  output out=agg1(drop=_type_ _freq_) mean=;
-run;
-data _t3; set _t2; run;
-
-data _t4;
-  set _t3;
-  if HIR > 0 then HIRR = round(100*HIR/EMPL, 0.01);
-  else HIRR = .;
+  var HIR EMPL;
+  output out=agg1(drop=_type_ _freq_) sum=;
 run;
 
 data &lb..o1;
-  set _t4;
+  set base;
 run;
 %if &dbg=0 %then %do;
-  proc datasets lib=work nolist; delete _t: _s: _x:; quit;
+  proc datasets lib=work nolist; delete s_d1 s_d2 base; quit;
 %end;
-%mend bldout5;
+%mend build_est;
 
-%bldout5(p=&dt);
+%build_est(p=&dt);

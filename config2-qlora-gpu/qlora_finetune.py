@@ -6,7 +6,7 @@ prompt/output schema (schema.py) as every other config in this project --
 the plan's Config 2: "the model is trained on pairs of SAS programs and
 their documentation... does a modest training run close the gap to the
 frontier while staying air-gapped." Needs a GPU; a free Colab T4 is enough
-for the 1B/2B-class base at MAXLEN<=2048 -- see this folder's SETUP.md.
+for a 1B-4B-class base at MAXLEN<=2048 -- see this folder's SETUP.md.
 
 HARD CONSTRAINT (plan section 2): the 20 eval-programs/ programs must be
 held out of training entirely, or the scores are meaningless. This script's
@@ -23,14 +23,32 @@ Colab setup (run once, in a cell, before this script):
 
 Hardware reality check (plan: report hardware honestly):
   * free T4 (16 GB, no bf16, no flash-attn): gemma-3-1b-it in 4-bit at
-    MAXLEN=2048 works comfortably; ~30-90 min for 600 samples x 2 epochs.
+    MAXLEN=2048 works comfortably; ~30-90 min for 600 samples x 2 epochs
+    (observed ~50s/step, 150 steps -- see this folder's SETUP.md).
+  * gemma-3-4b-it (this project's current default, matching config1's
+    gemma3:4b) is expected to fit a free T4 in 4-bit at MAXLEN=2048 too --
+    4B params in nf4 is roughly 2-2.5 GB of weights plus LoRA/optimizer
+    state/activations, well inside 16 GB -- but this has NOT actually been
+    run end-to-end on a T4 yet in this repo; expect noticeably slower
+    steps than the 1B numbers above and budget accordingly. Report real
+    numbers here once you've run it.
   * Colab Pro L4 / A100: MAXLEN=4096-8192, bf16, faster still.
 MAXLEN is the real constraint, not parameter count -- a real legacy program
 plus its documentation JSON must fit in one window.
 
-Run:
-    python3 qlora_finetune.py --train ../data/train.jsonl --eval ../eval-programs/gold_as_jsonl.jsonl \
-        --model google/gemma-3-1b-it --maxlen 2048 --epochs 2
+What has actually been run: an adapter trained with these defaults exists at
+`../adapters/sasdoc-lora` (2026-09-21). Its `run_config.json` records
+`model=google/gemma-3-4b-it, maxlen=2048, epochs=2, lr=2e-4, bf16=true` --
+and `bf16=true` comes from `torch.cuda.is_bf16_supported()`, which is False
+on a T4, so that run was NOT on a free T4. Neither the GPU model nor the
+wall-clock time was recorded. Record both for the paper; the table's
+"cost per program" is inference only and does not include this.
+
+Run (note --eval is a TRAIN-time holdout, never eval-programs/ -- pointing
+--eval at the scoring set is exactly the leak this config must not have):
+    python3 qlora_finetune.py --train ../data/train.jsonl \
+        --eval ../data/train_holdout.jsonl \
+        --model google/gemma-3-4b-it --maxlen 2048 --epochs 2
 """
 
 import argparse
@@ -85,8 +103,8 @@ def main():
                     help="a small slice of TRAINING data held out for eval-during-training "
                          "loss curves only -- NOT the 20 eval-programs/ (those are for "
                          "results/score.py after training, never seen here)")
-    ap.add_argument("--model", default="google/gemma-3-1b-it",
-                    help="same base as config1's gemma3:1b (Ollama serves the GGUF "
+    ap.add_argument("--model", default="google/gemma-3-4b-it",
+                    help="same base as config1's gemma3:4b (Ollama serves the GGUF "
                          "conversion of this same model) -- keep these matched so the "
                          "config1 vs config2 comparison is actually base-vs-fine-tuned, "
                          "not base-model-vs-base-model. Gemma weights are gated on HF: "
@@ -107,7 +125,25 @@ def main():
     tok.padding_side = "right"
 
     train_recs = load_jsonl(args.train)
-    eval_recs = load_jsonl(args.eval) if os.path.exists(args.eval) else train_recs[-20:]
+    if os.path.exists(args.eval):
+        eval_recs = load_jsonl(args.eval)
+        train_names = {r.get("program_name") for r in train_recs}
+        overlap = [r.get("program_name") for r in eval_recs if r.get("program_name") in train_names]
+        if overlap:
+            print("WARNING: %d of %d --eval examples are also in --train (%s...). The "
+                  "eval loss below cannot show overfitting. generate_training_corpus.py "
+                  "splits a clean train_holdout.jsonl -- regenerate with it."
+                  % (len(overlap), len(eval_recs), ", ".join(overlap[:3])))
+    else:
+        # Last resort so a training run never dies on a missing file -- but say
+        # plainly what the resulting eval curve is and isn't worth.
+        eval_recs = train_recs[-20:]
+        print("WARNING: --eval %s not found; falling back to the LAST 20 TRAINING "
+              "examples. Those are in the training set, so the eval loss printed each "
+              "epoch measures memorization, not generalization. Run "
+              "generate_training_corpus.py (it writes train_holdout.jsonl) to get a "
+              "real train-time holdout. Neither file is the scoring set -- that is "
+              "always eval-programs/." % args.eval)
 
     # Drop anything that will not fit -- silent truncation of the assistant turn
     # teaches the model to stop mid-dictionary, the single most common way this

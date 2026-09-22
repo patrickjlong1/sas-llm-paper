@@ -20,14 +20,29 @@ Metrics computed per program (plan section 3):
                             source text (or, when given, an extra ground-truth source
                             such as config3's PROC CONTENTS output)
 
+IMPORTANT -- how a missing/invalid output is scored. If a config produced no
+parseable JSON for a program (or produced JSON that fails schema.validate()),
+every F1/accuracy metric for that program is 0.0 and `hallucination_rate` is
+1.0. That 1.0 is a deliberate worst-case CONVENTION, not a measurement: the
+model emitted no names at all, so `n_hallucinated` is 0 and the rate is
+genuinely undefined. Scoring it 1.0 keeps a config from improving its
+hallucination number by failing to answer. Every row carries
+`hallucination_basis` so the two cases stay distinguishable downstream:
+
+    "emitted_names"          n_hallucinated / n_emitted_names, actually measured
+    "no_output_worst_case"   nothing parseable was emitted; rate pinned to 1.0
+
+run_eval.py's table prints per-config coverage (how many programs produced
+parseable output) next to the numbers for exactly this reason.
+
 Usage:
     python3 score.py --gold ../eval-programs/gold/prog900_estab.gold.json \
         --pred preds/config1/prog900_estab.pred.json \
         --source ../eval-programs/programs/prog900_estab.sas
 
     # a whole run directory at once (one *.pred.json per program):
-    python3 score.py --gold-dir ../eval-programs/gold --pred-dir preds/config1 \
-        --source-dir ../eval-programs/programs --out outputs/config1_run1.scores.jsonl
+    python3 score.py --gold-dir ../eval-programs/gold --pred-dir preds/config1-gemma-cpu \
+        --source-dir ../eval-programs/programs --out outputs/config1-gemma-cpu_run1.scores.jsonl
 """
 
 import argparse
@@ -69,10 +84,15 @@ def score_one(gold, pred, source_text, extra_source_text=None):
         # everything downstream is undefined for an invalid/missing payload --
         # report zeros rather than crash, per plan: "report [schema validity]
         # separately" precisely because small models fail here often.
+        # hallucination_rate=1.0 here is the worst-case convention documented in
+        # this module's docstring, NOT a measurement -- nothing was emitted, so
+        # n_hallucinated is 0 and the true rate is undefined. hallucination_basis
+        # keeps the two cases apart for anything reading these rows later.
         zero = dict(result, variable_precision=0.0, variable_recall=0.0, variable_f1=0.0,
                     type_length_accuracy=0.0, macro_param_f1=0.0, macro_posk_accuracy=0.0,
                     macro_default_exact=0.0, io_dataset_f1=0.0, called_by_f1=0.0,
-                    hallucination_rate=1.0, n_hallucinated=0, hallucinated=[])
+                    hallucination_rate=1.0, n_hallucinated=0, hallucinated=[],
+                    hallucination_basis="no_output_worst_case")
         return zero
 
     # ---- variable dictionary: precision/recall/F1 by (dataset, name) -------
@@ -164,6 +184,8 @@ def score_one(gold, pred, source_text, extra_source_text=None):
     result["n_hallucinated"] = len(hallucinated)
     result["hallucinated"] = hallucinated
     result["hallucination_rate"] = (len(hallucinated) / len(emitted)) if emitted else 0.0
+    result["hallucination_basis"] = "emitted_names"
+    result["used_extra_source"] = bool(extra_source_text)
 
     return result
 
@@ -179,6 +201,11 @@ def main():
     ap.add_argument("--gold-dir")
     ap.add_argument("--pred-dir")
     ap.add_argument("--source-dir")
+    ap.add_argument("--extra-source-dir", default=None,
+                    help="directory form of --extra-source for --gold-dir mode: one "
+                         "<program>.txt or <program>.json of real SAS metadata per "
+                         "program (config2's oda_harvest.py / config3's "
+                         "sas_metadata.py output)")
     ap.add_argument("--out", default=None, help="write one JSON-lines row per program here")
     args = ap.parse_args()
 
@@ -191,7 +218,14 @@ def main():
             source_path = os.path.join(args.source_dir, base + ".sas")
             pred = json.load(open(pred_path)) if os.path.exists(pred_path) else None
             source_text = open(source_path).read() if os.path.exists(source_path) else ""
-            rows.append(score_one(gold, pred, source_text))
+            extra = None
+            if args.extra_source_dir:
+                for ext in (".txt", ".json"):
+                    cand = os.path.join(args.extra_source_dir, base + ext)
+                    if os.path.exists(cand):
+                        extra = open(cand).read()
+                        break
+            rows.append(score_one(gold, pred, source_text, extra))
     else:
         gold = json.load(open(args.gold))
         pred = json.load(open(args.pred)) if args.pred and os.path.exists(args.pred) else None
@@ -205,6 +239,20 @@ def main():
             for r in rows:
                 fh.write(json.dumps(r) + "\n")
         print("wrote %d row(s) to %s" % (len(rows), args.out))
+        # Stamp which eval corpus these numbers refer to. run_eval.py --table
+        # refuses to present a row as current without this (see provenance.py).
+        if args.gold_dir and args.source_dir:
+            import provenance
+            prov_path = provenance.for_scores_path(args.out)
+            provenance.write(
+                prov_path,
+                provenance.corpus_fingerprint(args.gold_dir, args.source_dir),
+                predictions=provenance.predictions_fingerprint(args.pred_dir)
+                if args.pred_dir else None,
+                config=os.path.basename(args.pred_dir or ""),
+                notes=("hallucination check also allowed real SAS metadata from %s"
+                       % args.extra_source_dir) if args.extra_source_dir else None)
+            print("wrote", prov_path)
     else:
         for r in rows:
             print(json.dumps(r, indent=2))

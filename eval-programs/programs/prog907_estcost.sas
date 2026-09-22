@@ -1,66 +1,61 @@
-options nonotes;
-libname xin '/prod/legacy/estcost/in';
-%let dt=202112;
+options nomprint nosymbolgen;
+libname xin '/sasdata/arch/estcost';
+%let dt=201803;
 
 data d1;
-  length RUID $14 IND $6 QTR $6 WCOST 8 HRSP 8;
+  length RUID $14 IND $6 QTR $6 BCOST 8 OWGT 8;
   infile datalines dsd truncover;
-  input RUID $ IND $ QTR $ WCOST HRSP;
+  input RUID $ IND $ QTR $ BCOST OWGT;
   datalines;
-  RUI0001,IND000,202112,369.45,107.01
-  RUI0002,IND000,202112,715.73,195.36
-  RUI0003,IND000,202112,250.43,205.99
-  RUI0004,IND000,202112,867.79,381.71
+  RUI0001,IND000,201803,188.60,676.15
+  RUI0002,IND000,201803,802.34,349.71
+  RUI0003,IND000,201803,65.83,90.07
+  RUI0004,IND000,201803,451.68,558.36
   ;
 run;
 
 data d2;
-  length RUID $14 IND $6 BCOST 8 EDTF $1;
+  length RUID $14 IND $6 WCOST 8 TCOMP 8 HRSP 8 EDTF $1;
   infile datalines dsd truncover;
-  input RUID $ IND $ BCOST EDTF $;
+  input RUID $ IND $ WCOST TCOMP HRSP EDTF $;
   datalines;
-  RUI0001,IND000,609.91,P
-  RUI0002,IND000,679.73,R
-  RUI0003,IND000,475.22,N
-  RUI0004,IND000,344.12,Y
+  RUI0001,IND000,74.82,263.42,404.51,E
+  RUI0002,IND000,197.34,999.68,271.39,I
+  RUI0003,IND000,685.70,721.56,611.82,A
+  RUI0004,IND000,431.86,483.24,88.07,E
   ;
 run;
 
-%macro runjob4(p=, lb=work, dbg=0);
-proc sort data=d1 out=_sd1; by RUID IND; run;
-proc sort data=d2 out=_sd2; by RUID IND; run;
-data _t1;
-  merge _sd1(in=i1) _sd2(in=i2);
-  by RUID IND;
-  if i1;
-  if QTR = '' then QTR = "&dt";
-run;
+%macro ccost_rpt(p=, lb=work, thr=10);
+proc sql;
+  create table j1 as
+    select a.*,
+           b.WCOST,
+           b.TCOMP,
+           b.HRSP,
+           b.EDTF
+    from d1 a
+    inner join d2 b
+      on a.RUID = b.RUID and a.IND = b.IND;
+quit;
 
-data _t2;
-  set _t1;
-  if WCOST > 0 then WCOSTR = round(100*WCOST/WCOST, 0.01);
+data hold;
+  set j1;
+  if WCOST ge &thr;
+  if QTR = '' then QTR = "&p";
+  if TCOMP > 0 then WCOSTR = round(100*WCOST/TCOMP, 0.01);
   else WCOSTR = .;
 run;
 
-proc summary data=_t2 nway;
+proc summary data=hold nway;
   class IND;
-  var WCOST HRSP;
+  var BCOST OWGT;
   output out=agg1(drop=_type_ _freq_) sum=;
 run;
-data _t3; set _t2; run;
-
-proc transpose data=_t3 out=_x4 prefix=v;
-  by RUID;
-  var WCOST;
-run;
-data _t4; set _t3; run;
 
 data &lb..o1;
-  set _t4;
+  set hold;
 run;
-%if &dbg=0 %then %do;
-  proc datasets lib=work nolist; delete _t: _s: _x:; quit;
-%end;
-%mend runjob4;
+%mend ccost_rpt;
 
-%runjob4(p=&dt);
+%ccost_rpt(p=&dt);

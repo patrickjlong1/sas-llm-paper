@@ -10,20 +10,7 @@
 # You should only need to change ONE line, marked CHANGE ME -- the iomhost
 # list for your ODA region (already filled in below for US-region/usw2).
 
-import os
 import shutil
-
-import saspy
-
-_jars = os.path.join(os.path.dirname(saspy.__file__), "java", "iomclient")
-cpath = os.pathsep.join([
-    os.path.join(_jars, "log4j.jar"),
-    os.path.join(_jars, "sas.security.sspi.jar"),
-    os.path.join(_jars, "sas.core.jar"),
-    os.path.join(_jars, "sas.svc.connection.jar"),
-    os.path.join(_jars, "sas.rutil.jar"),
-    os.path.join(os.path.dirname(saspy.__file__), "java", "saspyiom.jar"),
-])
 
 SAS_config_names = ["oda"]
 
@@ -46,7 +33,14 @@ oda = {
     "iomport": 8591,
     "encoding": "utf-8",
     "authkey": "oda",          # matches the 'oda' line in ~/.authinfo
-    "classpath": cpath,
+    # Deliberately NOT setting "classpath" -- leave it to saspy's own default.
+    # A hand-built classpath here previously listed only iomclient/*.jar and
+    # broke on any JRE 9+ (which is what `apt-get install default-jdk` gives
+    # you on Colab/Kaggle): SAS's IOM protocol needs org.omg.CORBA.*, which
+    # the JDK carried through Java 8 but dropped in JEP 320. saspy ships a
+    # CORBA back-port and its default classpath already includes it; see
+    # config1-gemma-cpu/config/sascfg_personal.py for the full writeup of
+    # the "NoClassDefFoundError: org/omg/CORBA/COMM_FAILURE" this caused.
 }
 
 # ---------------------------------------------------------------------------

@@ -61,7 +61,7 @@ def _parse_json(text):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--eval-sas-dir", default="../eval-programs/programs")
-    ap.add_argument("--model", default="google/gemma-3-1b-it")
+    ap.add_argument("--model", default="google/gemma-3-4b-it")
     ap.add_argument("--revision", default="main")
     ap.add_argument("--adapter", default=None,
                     help="path/hub-id of the QLoRA adapter from qlora_finetune.py. "
@@ -71,9 +71,37 @@ def main():
                          "from serving-stack differences).")
     ap.add_argument("--out", required=True)
     ap.add_argument("--max-new", type=int, default=1200)
+    ap.add_argument("--gpu-usd-per-hour", type=float, default=0.0,
+                    help="price of the GPU this runs on, so the results table's "
+                         "'cost per program' column is a measured number rather than "
+                         "a hardcoded 0. 0.0 (the default) is correct for Colab's "
+                         "FREE tier and is what makes the plan's air-gap sentence "
+                         "true; set it to what you actually pay on a Pro/paid runtime. "
+                         "Inference only -- the one-time training cost is separate "
+                         "(see SETUP.md section 4).")
     args = ap.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
+
+    sas_files = sorted(glob.glob(os.path.join(args.eval_sas_dir, "*.sas")))
+    if not sas_files:
+        raise SystemExit("no .sas files found in %r -- this almost certainly means the path "
+                         "is wrong (e.g. eval-programs/ wasn't pulled into this session), not "
+                         "that the directory is genuinely empty. Pass --eval-sas-dir to point "
+                         "at the real eval-programs/programs." % args.eval_sas_dir)
+
+    # PLAN.md: "Record wall-clock time, hardware, and cost per program."
+    # Read the hardware rather than describing it in prose -- a results table
+    # that says "GPU (see SETUP.md)" cannot be checked by a reader.
+    if torch.cuda.is_available():
+        hardware = "GPU: %s (%.1f GB)" % (
+            torch.cuda.get_device_name(0),
+            torch.cuda.get_device_properties(0).total_memory / 1e9)
+    else:
+        hardware = ("CPU -- no CUDA device visible. infer.py loads the base model "
+                    "in 4-bit via bitsandbytes, whose kernels need a CUDA GPU; on "
+                    "Colab set Runtime -> Change runtime type -> T4 GPU.")
+    print(hardware)
 
     tok = AutoTokenizer.from_pretrained(args.model, revision=args.revision)
     bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
@@ -84,7 +112,7 @@ def main():
         model = PeftModel.from_pretrained(model, args.adapter)
     model.eval()
 
-    for path in sorted(glob.glob(os.path.join(args.eval_sas_dir, "*.sas"))):
+    for path in sas_files:
         base = os.path.splitext(os.path.basename(path))[0]
         source = open(path).read()
         msgs = [{"role": "system", "content": SYSTEM},
@@ -108,8 +136,11 @@ def main():
                 json.dump(doc_json, fh, indent=2)
         with open(os.path.join(args.out, base + ".meta.json"), "w") as fh:
             json.dump({"model": args.model, "adapter": args.adapter,
-                      "elapsed_sec": round(elapsed, 2), "cost_usd": 0.0,
-                      "hardware": "GPU (see SETUP.md for the specific instance used)",
+                      "elapsed_sec": round(elapsed, 2),
+                      "cost_usd": round(elapsed / 3600.0 * args.gpu_usd_per_hour, 6),
+                      "gpu_usd_per_hour": args.gpu_usd_per_hour,
+                      "hardware": hardware, "max_new_tokens": args.max_new,
+                      "truncated": gen.shape[-1] - ids.shape[-1] >= args.max_new,
                       "parse_error": parse_err}, fh, indent=2)
 
         print("done", base, "(%.1fs%s)" % (elapsed, ", PARSE ERROR" if parse_err else ""))

@@ -1,7 +1,7 @@
 {
   "program_name": "prog909_hhold.sas",
   "program_summary": {
-    "description": "Builds an analysis-ready file at the surveyed household level for a single reference period, by merging raw collected microdata with a control file, applying a retention filter, and writing the result to a caller-specified library; also aggregates totals by region_code for review.",
+    "description": "Builds an analysis-ready household file for a single interview month by merging the control file onto collected microdata and computing a count of persons per 100 usual hours worked. Also averages hours and person counts by region into a review table.",
     "input_datasets": [
       "WORK.D1",
       "WORK.D2"
@@ -13,7 +13,7 @@
   },
   "macro_reference": [
     {
-      "name": "mkrun1",
+      "name": "hh_sched",
       "positional_params": [
         "p"
       ],
@@ -21,13 +21,9 @@
         {
           "name": "lb",
           "default": "work"
-        },
-        {
-          "name": "dbg",
-          "default": "0"
         }
       ],
-      "purpose": "Merges D1 and D2 to produce O1 for reference period `p`, applying a 4-step pipeline (sort/merge, derive, transpose, summarize).",
+      "purpose": "Joins the control file D2 onto raw microdata D1, derives the persons-per-hours rate, and writes WORK.O1 plus the by-region summary for interview month `p`.",
       "called_by": [
         "prog909_hhold.sas"
       ]
@@ -56,23 +52,7 @@
       "type": "char",
       "length": 6,
       "label": "Interview month YYYYMM",
-      "derivation": "carried through from the input file when populated; if blank, backfilled from the &dt macro variable set at the top of the program."
-    },
-    {
-      "name": "UHRS",
-      "dataset": "WORK.O1",
-      "type": "num",
-      "length": 8,
-      "label": "Usual weekly hours worked",
-      "derivation": "carried through unchanged from the merged input datasets."
-    },
-    {
-      "name": "NPER",
-      "dataset": "WORK.O1",
-      "type": "num",
-      "length": 8,
-      "label": "Count of persons in household",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "carried through from the input file when populated; if blank, backfilled from the &p macro variable at call time."
     },
     {
       "name": "INCB",
@@ -80,7 +60,7 @@
       "type": "char",
       "length": 2,
       "label": "Reported income bracket code",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "carried through unchanged from the raw microdata file D1."
     },
     {
       "name": "LFST",
@@ -88,15 +68,39 @@
       "type": "char",
       "length": 2,
       "label": "Labor force status code",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "NPER",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Count of persons in household",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "UHRS",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Usual weekly hours worked",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "PWGT",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Person-level weight",
+      "derivation": "brought in from the control file D2 in the join."
     },
     {
       "name": "NPERR",
       "dataset": "WORK.O1",
       "type": "num",
       "length": 8,
-      "label": "Count of persons in household expressed as a rate per 100 units",
-      "derivation": "computed as round(100*NPER/UHRS, 0.01) when NPER > 0, else set to missing."
+      "label": "Count of persons per 100 usual hours worked",
+      "derivation": "computed as round(100*NPER/UHRS, 0.01) when UHRS > 0, else set to missing."
     },
     {
       "name": "RGN",

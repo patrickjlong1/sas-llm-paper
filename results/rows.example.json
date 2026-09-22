@@ -1,0 +1,32 @@
+[
+  {
+    "label": "Config 1: Gemma CPU (ollama, gemma3:1b)",
+    "scores_patterns": ["outputs/config1-gemma-cpu.scores.jsonl", "outputs/config1-gemma-cpu_run*.scores.jsonl"],
+    "judge_patterns": ["outputs/config1-gemma-cpu.judge.jsonl", "outputs/config1-gemma-cpu_run*.judge.jsonl"],
+    "meta_dir": "preds/config1-gemma-cpu"
+  },
+  {
+    "label": "Config 1: Gemma CPU (hf, gemma-3-4b-it)",
+    "scores_patterns": ["outputs/config1-gemma-cpu-hf.scores.jsonl", "outputs/config1-gemma-cpu-hf_run*.scores.jsonl"],
+    "judge_patterns": ["outputs/config1-gemma-cpu-hf.judge.jsonl", "outputs/config1-gemma-cpu-hf_run*.judge.jsonl"],
+    "meta_dir": "preds/config1-gemma-cpu-hf"
+  },
+  {
+    "label": "Config 2: base (no adapter)",
+    "scores_patterns": ["outputs/config2-base.scores.jsonl", "outputs/config2-base_run*.scores.jsonl"],
+    "judge_patterns": ["outputs/config2-base.judge.jsonl", "outputs/config2-base_run*.judge.jsonl"],
+    "meta_dir": "preds/config2-base"
+  },
+  {
+    "label": "Config 2: QLoRA-tuned",
+    "scores_patterns": ["outputs/config2-tuned.scores.jsonl", "outputs/config2-tuned_run*.scores.jsonl"],
+    "judge_patterns": ["outputs/config2-tuned.judge.jsonl", "outputs/config2-tuned_run*.judge.jsonl"],
+    "meta_dir": "preds/config2-tuned"
+  },
+  {
+    "label": "Config 3: Claude + skills",
+    "scores_patterns": ["outputs/config3-frontier-skills.scores.jsonl", "outputs/config3-frontier-skills_run*.scores.jsonl"],
+    "judge_patterns": ["outputs/config3-frontier-skills.judge.jsonl", "outputs/config3-frontier-skills_run*.judge.jsonl"],
+    "meta_dir": "preds/config3-frontier-skills"
+  }
+]

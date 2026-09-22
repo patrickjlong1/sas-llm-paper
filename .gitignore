@@ -14,10 +14,18 @@ catalog/
 config1-gemma-cpu/out/
 config1-gemma-cpu/catalog/
 config3-frontier-skills/catalog/
+config3-frontier-skills/catalog-stale-*/
 
 # -- generated training data / adapters (config2) -------------------------------
 config2-qlora-gpu/data/
 config2-qlora-gpu/adapters/
+# qlora_finetune.py's default --out is ../adapters/ (repo root), not
+# config2-qlora-gpu/adapters/. A gemma-3-4b-it rank-32 adapter is ~130 MB and
+# the zipped copy the notebook downloads is larger still -- both are over
+# GitHub's 100 MB hard limit, so neither belongs in git. Publish the adapter
+# to the HF Hub (qlora_finetune.py --push) or keep it in Drive.
+/adapters/
+*.zip
 
 # -- generated eval outputs (results) -------------------------------------------
 results/preds/*

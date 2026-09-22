@@ -37,6 +37,11 @@ def main():
 
     eval_names = {os.path.basename(p)[: -len(".gold.json")] + ".sas"
                  for p in glob.glob(os.path.join(args.eval_gold, "*.gold.json"))}
+    if not eval_names:
+        sys.exit("*** found 0 eval programs in %r -- this almost certainly means the path "
+                 "is wrong (e.g. eval-programs/ wasn't pulled into this session), not that "
+                 "there's nothing to check. Refusing to report 'clean' against an empty set. "
+                 "Pass --eval-gold to point at the real eval-programs/gold." % args.eval_gold)
     eval_hashes = set()
     for p in glob.glob(os.path.join(args.eval_sas, "*.sas")):
         eval_hashes.add(hashlib.sha256(open(p, "rb").read()).hexdigest())

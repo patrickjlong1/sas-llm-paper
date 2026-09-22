@@ -1,57 +1,48 @@
 options validvarname=v7;
 libname xin '/prod/legacy/estab/in';
-%let dt=201803;
+%let dt=201912;
 
 data d1;
-  length ESTID $12 ST $2 PER $6 WGTF 8 JO 8;
+  length ESTID $12 ST $2 PER $6 JO 8 WGTF 8 RSPF $1;
   infile datalines dsd truncover;
-  input ESTID $ ST $ PER $ WGTF JO;
+  input ESTID $ ST $ PER $ JO WGTF RSPF $;
   datalines;
-  EST0001,01,201803,13.83,405.88
-  EST0002,06,201803,855.33,708.66
-  EST0003,02,201803,467.39,427.92
-  EST0004,11,201803,503.29,570.87
+  EST0001,01,201912,605.18,77.36,R
+  EST0002,06,201912,228.64,345.03,N
+  EST0003,02,201912,74.41,512.47,R
+  EST0004,11,201912,830.22,958.10,P
   ;
 run;
 
 data d2;
-  length ESTID $12 ST $2 HIR 8;
+  length ESTID $12 ST $2 EMPL 8 HIR 8;
   infile datalines dsd truncover;
-  input ESTID $ ST $ HIR;
+  input ESTID $ ST $ EMPL HIR;
   datalines;
-  EST0001,01,53.61
-  EST0002,06,144.98
-  EST0003,02,507.12
-  EST0004,11,900.96
+  EST0001,01,394.60,840.25
+  EST0002,06,588.23,166.32
+  EST0003,02,251.85,611.08
+  EST0004,11,742.72,377.60
   ;
 run;
 
-%macro runjob2(p=, lb=work, thr=5);
-proc sort data=d1 out=_sd1; by ESTID ST; run;
-proc sort data=d2 out=_sd2; by ESTID ST; run;
-data _t1;
-  merge _sd1(in=i1) _sd2(in=i2);
+%macro est_prep(p=, lb=work, thr=5);
+proc sort data=d1 out=s_d1; by ESTID ST; run;
+proc sort data=d2 out=s_d2; by ESTID ST; run;
+
+data sel;
+  merge s_d1(in=i1) s_d2(in=i2);
   by ESTID ST;
   if i1;
-  if WGTF ge &thr;
-  if PER = '' then PER = "&dt";
-run;
-
-data _t2;
-  set _t1;
-  if WGTF > 0 then WGTFR = round(100*WGTF/WGTF, 0.01);
+  if EMPL ge &thr;
+  if PER = '' then PER = "&p";
+  if EMPL > 0 then WGTFR = round(100*WGTF/EMPL, 0.01);
   else WGTFR = .;
 run;
 
-proc transpose data=_t2 out=_x3 prefix=v;
-  by ESTID;
-  var WGTF;
-run;
-data _t3; set _t2; run;
-
 data &lb..o1;
-  set _t3;
+  set sel;
 run;
-%mend runjob2;
+%mend est_prep;
 
-%runjob2(p=&dt);
+%est_prep(p=&dt);

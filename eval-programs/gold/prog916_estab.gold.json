@@ -1,7 +1,7 @@
 {
   "program_name": "prog916_estab.sas",
   "program_summary": {
-    "description": "Builds an analysis-ready file at the sampled establishment level for a single reference period, by merging raw collected microdata with a control file, applying a retention filter, and writing the result to a caller-specified library; also aggregates totals by state_fips for review.",
+    "description": "Builds an analysis-ready establishment file for a single reference period by merging the control file onto collected microdata, keeping establishments above a minimum separations threshold, and computing a hires rate per 100 employees. Also averages weights and hires by state into a review table.",
     "input_datasets": [
       "WORK.D1",
       "WORK.D2"
@@ -13,7 +13,7 @@
   },
   "macro_reference": [
     {
-      "name": "dostep9",
+      "name": "estab_run",
       "positional_params": [
         "p"
       ],
@@ -23,11 +23,11 @@
           "default": "work"
         },
         {
-          "name": "dbg",
-          "default": "0"
+          "name": "thr",
+          "default": "10"
         }
       ],
-      "purpose": "Merges D1 and D2 to produce O1 for reference period `p`, applying a 3-step pipeline (sort/merge, summarize, transpose).",
+      "purpose": "Sorts and merges the control file D2 onto raw microdata D1, applies the separations retention threshold, derives the hires rate per 100 employees, and writes WORK.O1 plus the by-state summary for reference period `p`.",
       "called_by": [
         "prog916_estab.sas"
       ]
@@ -56,23 +56,7 @@
       "type": "char",
       "length": 6,
       "label": "Reference period YYYYMM",
-      "derivation": "carried through from the input file when populated; if blank, backfilled from the &dt macro variable set at the top of the program."
-    },
-    {
-      "name": "WGTF",
-      "dataset": "WORK.O1",
-      "type": "num",
-      "length": 8,
-      "label": "Final sampling weight",
-      "derivation": "carried through unchanged from the merged input datasets."
-    },
-    {
-      "name": "HIR",
-      "dataset": "WORK.O1",
-      "type": "num",
-      "length": 8,
-      "label": "Total hires",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "carried through from the input file when populated; if blank, backfilled from the &p macro variable at call time."
     },
     {
       "name": "SEP",
@@ -80,7 +64,39 @@
       "type": "num",
       "length": 8,
       "label": "Total separations",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "WGTF",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Final sampling weight",
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "EMPL",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total employment level",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "JO",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Job openings count",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "HIR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total hires",
+      "derivation": "brought in from the control file D2 in the join."
     },
     {
       "name": "RSPF",
@@ -88,7 +104,15 @@
       "type": "char",
       "length": 1,
       "label": "Response status flag (R/N/P)",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "HIRR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total hires per 100 employees",
+      "derivation": "computed as round(100*HIR/EMPL, 0.01) when EMPL > 0, else set to missing."
     },
     {
       "name": "ST",

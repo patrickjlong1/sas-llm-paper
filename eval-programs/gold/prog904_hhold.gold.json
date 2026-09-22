@@ -1,11 +1,10 @@
 {
   "program_name": "prog904_hhold.sas",
   "program_summary": {
-    "description": "Builds an analysis-ready file at the surveyed household level for a single reference period, by merging raw collected microdata with a control file, applying a retention filter, and writing the result to a caller-specified library; also aggregates totals by region_code for review.",
+    "description": "Builds an analysis-ready household file for a single interview month by merging the control file onto collected microdata, retaining households above a minimum person-weight threshold, and computing a normalized person weight. Also averages weights and person counts by region into a review table.",
     "input_datasets": [
       "WORK.D1",
-      "WORK.D2",
-      "WORK.D3"
+      "WORK.D2"
     ],
     "output_datasets": [
       "WORK.O1",
@@ -14,7 +13,7 @@
   },
   "macro_reference": [
     {
-      "name": "prcstep5",
+      "name": "hh_prep",
       "positional_params": [
         "p"
       ],
@@ -22,9 +21,13 @@
         {
           "name": "lb",
           "default": "work"
+        },
+        {
+          "name": "thr",
+          "default": "0"
         }
       ],
-      "purpose": "Merges D1 and D2 to produce O1 for reference period `p`, applying a 4-step pipeline (sort/merge, summarize, derive, transpose).",
+      "purpose": "Sorts and merges the control file D2 onto raw microdata D1, applies the person-weight retention threshold, derives the person-weight rate, and writes WORK.O1 plus the by-region summary for interview month `p`.",
       "called_by": [
         "prog904_hhold.sas"
       ]
@@ -53,23 +56,7 @@
       "type": "char",
       "length": 6,
       "label": "Interview month YYYYMM",
-      "derivation": "carried through from the input file when populated; if blank, backfilled from the &dt macro variable set at the top of the program."
-    },
-    {
-      "name": "PWGT",
-      "dataset": "WORK.O1",
-      "type": "num",
-      "length": 8,
-      "label": "Person-level weight",
-      "derivation": "carried through unchanged from the merged input datasets."
-    },
-    {
-      "name": "NPER",
-      "dataset": "WORK.O1",
-      "type": "num",
-      "length": 8,
-      "label": "Count of persons in household",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "carried through from the input file when populated; if blank, backfilled from the &p macro variable at call time."
     },
     {
       "name": "UHRS",
@@ -77,15 +64,31 @@
       "type": "num",
       "length": 8,
       "label": "Usual weekly hours worked",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "carried through unchanged from the raw microdata file D1."
     },
     {
-      "name": "PRXF",
+      "name": "LFST",
       "dataset": "WORK.O1",
       "type": "char",
-      "length": 1,
-      "label": "Proxy interview flag (Y/N)",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "length": 2,
+      "label": "Labor force status code",
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "PWGT",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Person-level weight",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "NPER",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Count of persons in household",
+      "derivation": "brought in from the control file D2 in the join."
     },
     {
       "name": "INCB",
@@ -93,15 +96,23 @@
       "type": "char",
       "length": 2,
       "label": "Reported income bracket code",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "brought in from the control file D2 in the join."
     },
     {
-      "name": "NPERR",
+      "name": "PRXF",
+      "dataset": "WORK.O1",
+      "type": "char",
+      "length": 1,
+      "label": "Proxy interview flag (Y/N)",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "PWGTR",
       "dataset": "WORK.O1",
       "type": "num",
       "length": 8,
-      "label": "Count of persons in household expressed as a rate per 100 units",
-      "derivation": "computed as round(100*NPER/PWGT, 0.01) when NPER > 0, else set to missing."
+      "label": "Person-level weight per 100 persons in household",
+      "derivation": "computed as round(100*PWGT/NPER, 0.01) when NPER > 0, else set to missing."
     },
     {
       "name": "RGN",

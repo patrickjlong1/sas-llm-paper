@@ -1,66 +1,59 @@
 options mlogic nomprint;
 libname xin '/sasdata/arch/hhold';
-%let dt=201709;
+%let dt=202012;
 
 data d1;
-  length HHID $10 RGN $1 IMTH $6 UHRS 8 NPER 8;
+  length HHID $10 RGN $1 IMTH $6 INCB $2 LFST $2;
   infile datalines dsd truncover;
-  input HHID $ RGN $ IMTH $ UHRS NPER;
+  input HHID $ RGN $ IMTH $ INCB $ LFST $;
   datalines;
-  HHI0001,0,201709,607.94,256.92
-  HHI0002,0,201709,443.58,68.09
-  HHI0003,0,201709,208.79,498.44
-  HHI0004,1,201709,405.20,468.32
+  HHI0001,0,202012,B,U
+  HHI0002,0,202012,E,I
+  HHI0003,0,202012,A,E
+  HHI0004,1,202012,D,N
   ;
 run;
 
 data d2;
-  length HHID $10 RGN $1 INCB $2 LFST $2;
+  length HHID $10 RGN $1 NPER 8 UHRS 8 PWGT 8;
   infile datalines dsd truncover;
-  input HHID $ RGN $ INCB $ LFST $;
+  input HHID $ RGN $ NPER UHRS PWGT;
   datalines;
-  HHI0001,0,E,E
-  HHI0002,0,N,A
-  HHI0003,0,I,E
-  HHI0004,1,E,I
+  HHI0001,0,707.14,310.53,61.72
+  HHI0002,0,902.46,536.91,402.18
+  HHI0003,0,159.37,765.87,824.35
+  HHI0004,1,444.85,95.20,151.49
   ;
 run;
 
-%macro mkrun1(p=, lb=work, dbg=0);
-proc sort data=d1 out=_sd1; by HHID RGN; run;
-proc sort data=d2 out=_sd2; by HHID RGN; run;
-data _t1;
-  merge _sd1(in=i1) _sd2(in=i2);
-  by HHID RGN;
-  if i1;
-  if IMTH = '' then IMTH = "&dt";
-run;
+%macro hh_sched(p=, lb=work);
+proc sql;
+  create table j1 as
+    select a.*,
+           b.NPER,
+           b.UHRS,
+           b.PWGT
+    from d1 a
+    inner join d2 b
+      on a.HHID = b.HHID and a.RGN = b.RGN;
+quit;
 
-data _t2;
-  set _t1;
-  if NPER > 0 then NPERR = round(100*NPER/UHRS, 0.01);
+data hold;
+  set j1;
+  if IMTH = '' then IMTH = "&p";
+  if UHRS > 0 then NPERR = round(100*NPER/UHRS, 0.01);
   else NPERR = .;
 run;
 
-proc transpose data=_t2 out=_x3 prefix=v;
-  by HHID;
-  var UHRS;
-run;
-data _t3; set _t2; run;
-
-proc summary data=_t3 nway;
+proc summary data=hold nway;
   class RGN;
   var UHRS NPER;
   output out=agg1(drop=_type_ _freq_) mean=;
 run;
-data _t4; set _t3; run;
 
 data &lb..o1;
-  set _t4;
+  set hold;
 run;
-%if &dbg=0 %then %do;
-  proc datasets lib=work nolist; delete _t: _s: _x:; quit;
-%end;
-%mend mkrun1;
+%mend hh_sched;
 
-%mkrun1(p=&dt);
+%hh_sched(p=&dt);

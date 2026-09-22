@@ -35,36 +35,73 @@ sas-doc-gen-project/
 │                                See SETUP.md for the ODA + API/Code setup.
 │
 ├── eval-programs/                20 held-out SAS programs (bad names, no
-│                                headers, on purpose) + perfect gold JSON,
-│                                both rendered from the same spec so gold
-│                                is correct by construction.
+│                                headers, on purpose) + gold JSON. Built by
+│                                corpus_gen.py from one spec, then rewritten
+│                                by hand on 2026-09-21 so the eval set does
+│                                not share templates with config2's training
+│                                corpus -- see its README.
 │
 └── results/                      Scoring: schema validity, F1s, hallucination
                                  rate, LLM-judge description scores, bootstrap
-                                 CI, difficulty tags, and the final results
-                                 table.
+                                 CI, difficulty tags, corpus provenance, and
+                                 the final results table.
 ```
+
+## Where this currently stands
+
+**There are no current results in the repo.** The 20 eval programs were
+rewritten by hand on 2026-09-21 (`eval-programs/README.md`), which
+invalidated every score computed before then; those are quarantined under
+`results/outputs/stale-2026-09-17/` with a writeup of what went wrong.
+Config2's QLoRA adapter has been trained but never scored. Read
+`results/README.md` before quoting any number from this repo.
+
+Scoring now stamps a fingerprint of the eval corpus next to every
+`.scores.jsonl` (`results/provenance.py`), and the results table marks a
+row **STALE** instead of printing numbers that no longer describe the
+corpus on disk.
 
 ## Quickstart
 
+Each config's notebook runs the whole thing end to end, including on a
+free Colab runtime -- that's the shortest path:
+
+| notebook | runtime |
+|---|---|
+| `config1-gemma-cpu/config1_gemma_cpu.ipynb` | Colab **CPU** (or this box's Ollama server) |
+| `config2-qlora-gpu/config2_qlora_gpu.ipynb` | Colab **T4 GPU** |
+| `config3-frontier-skills/config3_frontier_skills.ipynb` | a Claude Code session (the model *is* the config) |
+
+Each opens with a bootstrap cell that clones the whole repo and `cd`s into
+its own folder -- pulling a single config folder on its own leaves every
+`../eval-programs/...` and `../results/...` path broken.
+
+From a shell instead:
+
 ```bash
-# 1. Generate the eval set (already done once -- only needed to regenerate):
+# 1. (Re)generate the eval set -- NOT a maintenance step: it overwrites the
+#    hand-authored programs/ and gold/ with template output. See
+#    eval-programs/README.md.
 cd eval-programs && python3 corpus_gen.py --n 20 --seed 777 --id-offset 900 \
     --sas-out programs --gold-out gold
 
-# 2. Run config1 (Gemma, CPU) over all 20 -- see config1-gemma-cpu/SETUP.md first:
+# 2. Run config1 (Gemma, CPU) over all 20 -- see config1-gemma-cpu/SETUP.md first.
+#    --backend ollama needs a local Ollama server; --backend hf needs none.
 cd ../config1-gemma-cpu && python3 document_sas.py --dir ../eval-programs/programs \
-    --out ../results/preds/config1-gemma-cpu --catalog /tmp/config1_catalog
+    --backend ollama --out ../results/preds/config1-gemma-cpu \
+    --catalog ../results/catalog/config1-gemma-cpu
 
 # 3. Run config2 (QLoRA) -- needs a GPU, see config2-qlora-gpu/SETUP.md.
 # 4. Run config3 (Claude + skills) -- see config3-frontier-skills/SETUP.md,
 #    or just ask Claude Code to "document these SAS programs" from the repo root.
 
-# 5. Score everything:
+# 5. Score each config (also writes the corpus-provenance sidecar):
 cd ../results
-python3 score.py --gold-dir ../eval-programs/gold --pred-dir preds/config1-gemma-cpu \
-    --source-dir ../eval-programs/programs --out outputs/config1_run1.scores.jsonl
-python3 bootstrap_ci.py --runs outputs/config1_run1.scores.jsonl --all-metrics
+python3 run_eval.py --config config1-gemma-cpu \
+    --pred-dir preds/config1-gemma-cpu --out-prefix outputs/config1-gemma-cpu
+
+# 6. Print the plan's results table -- one call, all rows:
+python3 run_eval.py --table --rows rows.example.json
 ```
 
 See each folder's own `README.md`/`SETUP.md` for the full walkthrough --
@@ -76,10 +113,17 @@ hand any single folder to someone else and it still runs).
 
 Every config's SETUP.md covers this, but the shape is the same everywhere:
 create `~/.authinfo` yourself (never paste credentials into a chat
-session), the `iomhost` region list in each `config/sascfg_personal.py` is
-already filled in for a confirmed US-region/usw2 account, and a portable
-JRE at `jre/` (shared, repo root) means no system Java or sudo is needed.
-ODA is free for academic/non-commercial use.
+session; on Colab use its Secrets panel and let the notebook write the
+file into the ephemeral session), and the `iomhost` region list in each
+`sascfg_personal.py` is already filled in for a confirmed US-region/usw2
+account. ODA is free for academic/non-commercial use.
+
+**Java.** `jre/` at the repo root is a portable JRE so this box needs no
+system Java or sudo -- but it is 136 MB and **gitignored**, so a fresh
+clone (Colab included) does not have it. Each `sascfg_personal.py` uses
+the bundled JRE when it exists and falls back to whatever `java` is on
+`PATH` otherwise; on Colab, `apt-get install default-jdk` in a cell (it
+runs as root) and the fallback takes over.
 
 ## History
 

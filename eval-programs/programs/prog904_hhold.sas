@@ -1,75 +1,54 @@
-options mlogic nomprint;
+options validvarname=v7;
 libname xin '/prod/legacy/hhold/in';
-%let dt=201703;
+%let dt=201604;
 
 data d1;
-  length HHID $10 RGN $1 IMTH $6 PWGT 8 NPER 8;
+  length HHID $10 RGN $1 IMTH $6 UHRS 8 LFST $2;
   infile datalines dsd truncover;
-  input HHID $ RGN $ IMTH $ PWGT NPER;
+  input HHID $ RGN $ IMTH $ UHRS LFST $;
   datalines;
-  HHI0001,0,201703,458.37,897.77
-  HHI0002,0,201703,623.82,122.99
-  HHI0003,0,201703,505.98,620.89
-  HHI0004,1,201703,495.14,724.76
+  HHI0001,0,201604,603.38,E
+  HHI0002,0,201604,74.55,I
+  HHI0003,0,201604,918.21,U
+  HHI0004,1,201604,187.36,N
   ;
 run;
 
 data d2;
-  length HHID $10 RGN $1 UHRS 8 PRXF $1 INCB $2;
+  length HHID $10 RGN $1 PWGT 8 NPER 8 INCB $2 PRXF $1;
   infile datalines dsd truncover;
-  input HHID $ RGN $ UHRS PRXF $ INCB $;
+  input HHID $ RGN $ PWGT NPER INCB $ PRXF $;
   datalines;
-  HHI0001,0,800.45,Y,E
-  HHI0002,0,367.37,A,Y
-  HHI0003,0,11.69,N,E
-  HHI0004,1,764.49,N,N
+  HHI0001,0,846.12,421.97,B,N
+  HHI0002,0,510.38,150.60,E,Y
+  HHI0003,0,739.06,586.21,C,N
+  HHI0004,1,92.43,97.23,A,Y
   ;
 run;
 
-data d3;
-  length HHID $10 RGN $1 IMTH $6 PWGT 8;
-  infile datalines dsd truncover;
-  input HHID $ RGN $ IMTH $ PWGT;
-  datalines;
-  HHI0001,0,201703,71.72
-  HHI0002,0,201703,589.31
-  HHI0003,0,201703,570.66
-  HHI0004,1,201703,791.63
-  ;
-run;
+%macro hh_prep(p=, lb=work, thr=0);
+proc sort data=d1 out=s_d1; by HHID RGN; run;
+proc sort data=d2 out=s_d2; by HHID RGN; run;
 
-%macro prcstep5(p=, lb=work);
-proc sort data=d1 out=_sd1; by HHID RGN; run;
-proc sort data=d2 out=_sd2; by HHID RGN; run;
-data _t1;
-  merge _sd1(in=i1) _sd2(in=i2);
+data sel;
+  merge s_d1(in=i1) s_d2(in=i2);
   by HHID RGN;
   if i1;
-  if IMTH = '' then IMTH = "&dt";
+  if PWGT ge &thr;
+  if IMTH = '' then IMTH = "&p";
+  if NPER > 0 then PWGTR = round(100*PWGT/NPER, 0.01);
+  else PWGTR = .;
 run;
 
-proc summary data=_t1 nway;
+proc summary data=sel nway;
   class RGN;
   var PWGT NPER;
   output out=agg1(drop=_type_ _freq_) mean=;
 run;
-data _t2; set _t1; run;
-
-data _t3;
-  set _t2;
-  if NPER > 0 then NPERR = round(100*NPER/PWGT, 0.01);
-  else NPERR = .;
-run;
-
-proc transpose data=_t3 out=_x4 prefix=v;
-  by HHID;
-  var PWGT;
-run;
-data _t4; set _t3; run;
 
 data &lb..o1;
-  set _t4;
+  set sel;
 run;
-%mend prcstep5;
+%mend hh_prep;
 
-%prcstep5(p=&dt);
+%hh_prep(p=&dt);

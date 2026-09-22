@@ -32,11 +32,11 @@ Two run modes:
                 gold, non-interactively, via the judge model.
 
 Usage:
-    python3 llm_judge.py --gold-dir ../eval-programs/gold --pred-dir preds/config1 \
-        --out outputs/config1_run1.judge.jsonl
+    python3 llm_judge.py --gold-dir ../eval-programs/gold --pred-dir preds/config1-gemma-cpu \
+        --out outputs/config1-gemma-cpu_run1.judge.jsonl
 
     python3 llm_judge.py --gold-dir ../eval-programs/gold \
-        --pred-dirs preds/config1 preds/config2 preds/config3 \
+        --pred-dirs preds/config1-gemma-cpu preds/config2-tuned preds/config3-frontier-skills \
         --calibrate --n 30 --out outputs/calibration_sample.jsonl
 """
 

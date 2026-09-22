@@ -1,7 +1,7 @@
 {
   "program_name": "prog906_estcost.sas",
   "program_summary": {
-    "description": "Builds an analysis-ready file at the reporting unit level for a single reference period, by merging raw collected microdata with a control file, applying a retention filter, and writing the result to a caller-specified library; also aggregates totals by industry_code for review.",
+    "description": "Builds an analysis-ready reporting unit file for a single quarter by merging the control file and prior-quarter total compensation onto collected cost microdata, retaining units above a total-compensation threshold, and computing compensation per 100 hours paid plus a quarter-over-quarter change in compensation. Also averages compensation and benefits by industry into a review table.",
     "input_datasets": [
       "WORK.D1",
       "WORK.D2",
@@ -14,7 +14,7 @@
   },
   "macro_reference": [
     {
-      "name": "prcstep2",
+      "name": "qtr_cost",
       "positional_params": [
         "p"
       ],
@@ -25,10 +25,14 @@
         },
         {
           "name": "thr",
-          "default": "1"
+          "default": "5"
+        },
+        {
+          "name": "dbg",
+          "default": "0"
         }
       ],
-      "purpose": "Merges D1 and D2 to produce O1 for reference period `p`, applying a 4-step pipeline (sort/merge, summarize, derive, transpose).",
+      "purpose": "Joins the control file D2 and prior-quarter file D3 onto raw cost microdata, applies the total-compensation retention threshold, derives the compensation rate and quarter-over-quarter change, and writes WORK.O1 plus the by-industry summary for quarter `p`.",
       "called_by": [
         "prog906_estcost.sas"
       ]
@@ -57,15 +61,31 @@
       "type": "char",
       "length": 6,
       "label": "Quarter label YYYYQn",
-      "derivation": "carried through from the input file when populated; if blank, backfilled from the &dt macro variable set at the top of the program."
+      "derivation": "carried through from the input file when populated; if blank, backfilled from the &p macro variable at call time."
     },
     {
-      "name": "OWGT",
+      "name": "BCOST",
       "dataset": "WORK.O1",
       "type": "num",
       "length": 8,
-      "label": "Occupation-level weight",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "label": "Benefit cost",
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "HRSP",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total hours paid",
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "TCOMP",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total compensation cost",
+      "derivation": "brought in from the control file D2 in the join."
     },
     {
       "name": "WCOST",
@@ -73,7 +93,7 @@
       "type": "num",
       "length": 8,
       "label": "Wage and salary cost",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "brought in from the control file D2 in the join."
     },
     {
       "name": "EDTF",
@@ -81,15 +101,31 @@
       "type": "char",
       "length": 1,
       "label": "Edit action flag (A/E/I)",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "brought in from the control file D2 in the join."
     },
     {
-      "name": "OWGTR",
+      "name": "P_TCOMP",
       "dataset": "WORK.O1",
       "type": "num",
       "length": 8,
-      "label": "Occupation-level weight expressed as a rate per 100 units",
-      "derivation": "computed as round(100*OWGT/OWGT, 0.01) when OWGT > 0, else set to missing."
+      "label": "Prior-period total compensation cost",
+      "derivation": "prior-period value joined from the prior-quarter file D3 for period-over-period comparison."
+    },
+    {
+      "name": "TCDIF",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total compensation change vs prior period",
+      "derivation": "computed as TCOMP - P_TCOMP."
+    },
+    {
+      "name": "TCOMPR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total compensation cost per 100 hours paid",
+      "derivation": "computed as round(100*TCOMP/HRSP, 0.01) when TCOMP > 0, else set to missing."
     },
     {
       "name": "IND",
@@ -100,19 +136,19 @@
       "derivation": "grouping variable carried through from the class statement (IND)."
     },
     {
-      "name": "OWGT",
+      "name": "TCOMP",
       "dataset": "WORK.AGG1",
       "type": "num",
       "length": 8,
-      "label": "Occupation-level weight (mean across records)",
+      "label": "Total compensation cost (mean across records)",
       "derivation": "computed via PROC SUMMARY as the mean of this variable across records sharing the same IND (name unchanged from the input -- the `mean=;` output statement was not given explicit new names)."
     },
     {
-      "name": "WCOST",
+      "name": "BCOST",
       "dataset": "WORK.AGG1",
       "type": "num",
       "length": 8,
-      "label": "Wage and salary cost (mean across records)",
+      "label": "Benefit cost (mean across records)",
       "derivation": "computed via PROC SUMMARY as the mean of this variable across records sharing the same IND (name unchanged from the input -- the `mean=;` output statement was not given explicit new names)."
     }
   ]

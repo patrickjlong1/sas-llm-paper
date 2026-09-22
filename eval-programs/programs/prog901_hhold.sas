@@ -1,28 +1,28 @@
-options nomprint nosymbolgen;
-libname xin '/sasdata/arch/hhold';
-%let dt=201712;
+options mlogic nomprint;
+libname xin '/prod/legacy/hhold/in';
+%let dt=201805;
 
 data d1;
-  length HHID $10 RGN $1 IMTH $6 NPER 8 PWGT 8;
+  length HHID $10 RGN $1 IMTH $6 NPER 8 PWGT 8 UHRS 8;
   infile datalines dsd truncover;
-  input HHID $ RGN $ IMTH $ NPER PWGT;
+  input HHID $ RGN $ IMTH $ NPER PWGT UHRS;
   datalines;
-  HHI0001,0,201712,823.90,510.39
-  HHI0002,0,201712,670.66,837.41
-  HHI0003,0,201712,409.44,604.68
-  HHI0004,1,201712,644.55,693.54
+  HHI0001,0,201805,512.42,388.61,141.93
+  HHI0002,0,201805,83.76,774.28,660.50
+  HHI0003,0,201805,247.10,215.39,901.77
+  HHI0004,1,201805,698.85,497.06,79.44
   ;
 run;
 
 data d2;
-  length HHID $10 RGN $1 INCB $2 PRXF $1;
+  length HHID $10 RGN $1 LFST $2 INCB $2 PRXF $1;
   infile datalines dsd truncover;
-  input HHID $ RGN $ INCB $ PRXF $;
+  input HHID $ RGN $ LFST $ INCB $ PRXF $;
   datalines;
-  HHI0001,0,A,R
-  HHI0002,0,A,I
-  HHI0003,0,R,I
-  HHI0004,1,P,P
+  HHI0001,0,E,B,N
+  HHI0002,0,I,C,Y
+  HHI0003,0,U,A,N
+  HHI0004,1,E,D,Y
   ;
 run;
 
@@ -31,45 +31,45 @@ data d3;
   infile datalines dsd truncover;
   input HHID $ RGN $ IMTH $ NPER;
   datalines;
-  HHI0001,0,201712,596.83
-  HHI0002,0,201712,523.70
-  HHI0003,0,201712,155.68
-  HHI0004,1,201712,721.66
+  HHI0001,0,201805,433.15
+  HHI0002,0,201805,99.60
+  HHI0003,0,201805,205.84
+  HHI0004,1,201805,603.27
   ;
 run;
 
-%macro prcstep4(p=, lb=work);
-proc sort data=d1 out=_sd1; by HHID RGN; run;
-proc sort data=d2 out=_sd2; by HHID RGN; run;
-data _t1;
-  merge _sd1(in=i1) _sd2(in=i2);
-  by HHID RGN;
-  if i1;
-  if IMTH = '' then IMTH = "&dt";
-run;
+%macro hh_core(p=, lb=work);
+proc sql;
+  create table j1 as
+    select a.*,
+           b.LFST,
+           b.INCB,
+           b.PRXF,
+           c.NPER as P_NPER
+    from d1 a
+    inner join d2 b
+      on a.HHID = b.HHID and a.RGN = b.RGN
+    left join d3 c
+      on a.HHID = c.HHID and a.RGN = c.RGN;
+quit;
 
-proc summary data=_t1 nway;
-  class RGN;
-  var NPER PWGT;
-  output out=agg1(drop=_type_ _freq_) mean=;
-run;
-data _t2; set _t1; run;
-
-data _t3;
-  set _t2;
+data hold;
+  set j1;
+  if IMTH = '' then IMTH = "&p";
+  NPDIF = NPER - P_NPER;
   if PWGT > 0 then PWGTR = round(100*PWGT/NPER, 0.01);
   else PWGTR = .;
 run;
 
-proc transpose data=_t3 out=_x4 prefix=v;
-  by HHID;
-  var NPER;
+proc summary data=hold nway;
+  class RGN;
+  var UHRS PWGT;
+  output out=agg1(drop=_type_ _freq_) mean=;
 run;
-data _t4; set _t3; run;
 
 data &lb..o1;
-  set _t4;
+  set hold;
 run;
-%mend prcstep4;
+%mend hh_core;
 
-%prcstep4(p=&dt);
+%hh_core(p=&dt);

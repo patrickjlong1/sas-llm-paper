@@ -1,60 +1,54 @@
-options nonotes;
+options mlogic nomprint;
 libname xin '/prod/legacy/estab/in';
-%let dt=201809;
+%let dt=201905;
 
 data d1;
-  length ESTID $12 ST $2 PER $6 WGTF 8 HIR 8;
+  length ESTID $12 ST $2 PER $6 SEP 8 WGTF 8;
   infile datalines dsd truncover;
-  input ESTID $ ST $ PER $ WGTF HIR;
+  input ESTID $ ST $ PER $ SEP WGTF;
   datalines;
-  EST0001,01,201809,714.44,627.56
-  EST0002,06,201809,779.43,98.02
-  EST0003,02,201809,877.34,145.97
-  EST0004,11,201809,892.75,823.74
+  EST0001,01,201905,789.92,307.48
+  EST0002,06,201905,61.29,656.13
+  EST0003,02,201905,480.40,108.72
+  EST0004,11,201905,372.84,104.21
   ;
 run;
 
 data d2;
-  length ESTID $12 ST $2 SEP 8 RSPF $1;
+  length ESTID $12 ST $2 EMPL 8 JO 8 HIR 8 RSPF $1;
   infile datalines dsd truncover;
-  input ESTID $ ST $ SEP RSPF $;
+  input ESTID $ ST $ EMPL JO HIR RSPF $;
   datalines;
-  EST0001,01,737.59,P
-  EST0002,06,542.25,R
-  EST0003,02,522.68,Y
-  EST0004,11,658.87,I
+  EST0001,01,826.35,283.50,494.02,P
+  EST0002,06,185.80,414.16,359.94,N
+  EST0003,02,618.67,604.31,78.07,R
+  EST0004,11,289.55,52.88,681.86,N
   ;
 run;
 
-%macro dostep9(p=, lb=work, dbg=0);
-proc sort data=d1 out=_sd1; by ESTID ST; run;
-proc sort data=d2 out=_sd2; by ESTID ST; run;
-data _t1;
-  merge _sd1(in=i1) _sd2(in=i2);
+%macro estab_run(p=, lb=work, thr=10);
+proc sort data=d1 out=s_d1; by ESTID ST; run;
+proc sort data=d2 out=s_d2; by ESTID ST; run;
+
+data sel;
+  merge s_d1(in=i1) s_d2(in=i2);
   by ESTID ST;
   if i1;
-  if PER = '' then PER = "&dt";
+  if SEP ge &thr;
+  if PER = '' then PER = "&p";
+  if EMPL > 0 then HIRR = round(100*HIR/EMPL, 0.01);
+  else HIRR = .;
 run;
 
-proc summary data=_t1 nway;
+proc summary data=sel nway;
   class ST;
   var WGTF HIR;
   output out=agg1(drop=_type_ _freq_) mean=;
 run;
-data _t2; set _t1; run;
-
-proc transpose data=_t2 out=_x3 prefix=v;
-  by ESTID;
-  var WGTF;
-run;
-data _t3; set _t2; run;
 
 data &lb..o1;
-  set _t3;
+  set sel;
 run;
-%if &dbg=0 %then %do;
-  proc datasets lib=work nolist; delete _t: _s: _x:; quit;
-%end;
-%mend dostep9;
+%mend estab_run;
 
-%dostep9(p=&dt);
+%estab_run(p=&dt);

@@ -1,7 +1,7 @@
 {
   "program_name": "prog919_estab.sas",
   "program_summary": {
-    "description": "Builds an analysis-ready file at the sampled establishment level for a single reference period, by merging raw collected microdata with a control file, applying a retention filter, and writing the result to a caller-specified library; also aggregates totals by state_fips for review.",
+    "description": "Builds an analysis-ready establishment file for a single reference period by merging the control file onto collected microdata and computing a separations rate per 100 employees. Also sums hires and employment by state into a review table.",
     "input_datasets": [
       "WORK.D1",
       "WORK.D2"
@@ -13,7 +13,7 @@
   },
   "macro_reference": [
     {
-      "name": "bldout5",
+      "name": "build_est",
       "positional_params": [
         "p"
       ],
@@ -27,7 +27,7 @@
           "default": "0"
         }
       ],
-      "purpose": "Merges D1 and D2 to produce O1 for reference period `p`, applying a 4-step pipeline (sort/merge, transpose, summarize, derive).",
+      "purpose": "Sorts and merges the control file D2 onto raw microdata D1, derives the separations rate per 100 employees, and writes WORK.O1 plus the by-state summary for reference period `p`.",
       "called_by": [
         "prog919_estab.sas"
       ]
@@ -56,7 +56,7 @@
       "type": "char",
       "length": 6,
       "label": "Reference period YYYYMM",
-      "derivation": "carried through from the input file when populated; if blank, backfilled from the &dt macro variable set at the top of the program."
+      "derivation": "carried through from the input file when populated; if blank, backfilled from the &p macro variable at call time."
     },
     {
       "name": "EMPL",
@@ -64,7 +64,7 @@
       "type": "num",
       "length": 8,
       "label": "Total employment level",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "carried through unchanged from the raw microdata file D1."
     },
     {
       "name": "HIR",
@@ -72,7 +72,15 @@
       "type": "num",
       "length": 8,
       "label": "Total hires",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "carried through unchanged from the raw microdata file D1."
+    },
+    {
+      "name": "JO",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Job openings count",
+      "derivation": "carried through unchanged from the raw microdata file D1."
     },
     {
       "name": "SEP",
@@ -80,7 +88,7 @@
       "type": "num",
       "length": 8,
       "label": "Total separations",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "brought in from the control file D2 in the join."
     },
     {
       "name": "RSPF",
@@ -88,15 +96,23 @@
       "type": "char",
       "length": 1,
       "label": "Response status flag (R/N/P)",
-      "derivation": "carried through unchanged from the merged input datasets."
+      "derivation": "brought in from the control file D2 in the join."
     },
     {
-      "name": "HIRR",
+      "name": "WGTF",
       "dataset": "WORK.O1",
       "type": "num",
       "length": 8,
-      "label": "Total hires expressed as a rate per 100 units",
-      "derivation": "computed as round(100*HIR/EMPL, 0.01) when HIR > 0, else set to missing."
+      "label": "Final sampling weight",
+      "derivation": "brought in from the control file D2 in the join."
+    },
+    {
+      "name": "SEPR",
+      "dataset": "WORK.O1",
+      "type": "num",
+      "length": 8,
+      "label": "Total separations per 100 employees",
+      "derivation": "computed as round(100*SEP/EMPL, 0.01) when EMPL > 0, else set to missing."
     },
     {
       "name": "ST",
@@ -107,20 +123,20 @@
       "derivation": "grouping variable carried through from the class statement (ST)."
     },
     {
-      "name": "EMPL",
-      "dataset": "WORK.AGG1",
-      "type": "num",
-      "length": 8,
-      "label": "Total employment level (mean across records)",
-      "derivation": "computed via PROC SUMMARY as the mean of this variable across records sharing the same ST (name unchanged from the input -- the `mean=;` output statement was not given explicit new names)."
-    },
-    {
       "name": "HIR",
       "dataset": "WORK.AGG1",
       "type": "num",
       "length": 8,
-      "label": "Total hires (mean across records)",
-      "derivation": "computed via PROC SUMMARY as the mean of this variable across records sharing the same ST (name unchanged from the input -- the `mean=;` output statement was not given explicit new names)."
+      "label": "Total hires (sum across records)",
+      "derivation": "computed via PROC SUMMARY as the sum of this variable across records sharing the same ST (name unchanged from the input -- the `sum=;` output statement was not given explicit new names)."
+    },
+    {
+      "name": "EMPL",
+      "dataset": "WORK.AGG1",
+      "type": "num",
+      "length": 8,
+      "label": "Total employment level (sum across records)",
+      "derivation": "computed via PROC SUMMARY as the sum of this variable across records sharing the same ST (name unchanged from the input -- the `sum=;` output statement was not given explicit new names)."
     }
   ]
 }

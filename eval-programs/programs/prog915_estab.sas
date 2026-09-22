@@ -1,63 +1,62 @@
 options nomprint nosymbolgen;
 libname xin '/sasdata/arch/estab';
-%let dt=201607;
+%let dt=201604;
 
 data d1;
-  length ESTID $12 ST $2 PER $6 SEP 8 EMPL 8;
+  length ESTID $12 ST $2 PER $6 EMPL 8 WGTF 8;
   infile datalines dsd truncover;
-  input ESTID $ ST $ PER $ SEP EMPL;
+  input ESTID $ ST $ PER $ EMPL WGTF;
   datalines;
-  EST0001,01,201607,714.92,158.00
-  EST0002,06,201607,463.60,613.61
-  EST0003,02,201607,785.63,202.49
-  EST0004,11,201607,204.60,634.20
+  EST0001,01,201604,340.86,720.05
+  EST0002,06,201604,848.13,108.44
+  EST0003,02,201604,671.28,536.92
+  EST0004,11,201604,127.40,280.37
   ;
 run;
 
 data d2;
-  length ESTID $12 ST $2 RSPF $1;
+  length ESTID $12 ST $2 HIR 8 SEP 8 JO 8;
   infile datalines dsd truncover;
-  input ESTID $ ST $ RSPF $;
+  input ESTID $ ST $ HIR SEP JO;
   datalines;
-  EST0001,01,P
-  EST0002,06,R
-  EST0003,02,A
-  EST0004,11,N
+  EST0001,01,410.23,91.77,254.18
+  EST0002,06,622.38,770.08,377.61
+  EST0003,02,85.63,344.56,955.23
+  EST0004,11,931.15,214.20,68.86
   ;
 run;
 
-%macro bldout6(p=, lb=work);
-proc sort data=d1 out=_sd1; by ESTID ST; run;
-proc sort data=d2 out=_sd2; by ESTID ST; run;
-data _t1;
-  merge _sd1(in=i1) _sd2(in=i2);
-  by ESTID ST;
-  if i1;
-  if PER = '' then PER = "&dt";
+%macro est_aug(p=, lb=work, dbg=0);
+proc sql;
+  create table j1 as
+    select a.*,
+           b.HIR,
+           b.SEP,
+           b.JO
+    from d1 a
+    inner join d2 b
+      on a.ESTID = b.ESTID and a.ST = b.ST;
+quit;
+
+data hold;
+  set j1;
+  if PER = '' then PER = "&p";
+  if EMPL > 0 then WGTFR = round(100*WGTF/EMPL, 0.01);
+  else WGTFR = .;
 run;
 
-proc summary data=_t1 nway;
+proc summary data=hold nway;
   class ST;
-  var SEP EMPL;
+  var EMPL HIR;
   output out=agg1(drop=_type_ _freq_) sum=;
-run;
-data _t2; set _t1; run;
-
-proc transpose data=_t2 out=_x3 prefix=v;
-  by ESTID;
-  var SEP;
-run;
-data _t3; set _t2; run;
-
-data _t4;
-  set _t3;
-  if SEP > 0 then SEPR = round(100*SEP/SEP, 0.01);
-  else SEPR = .;
 run;
 
 data &lb..o1;
-  set _t4;
+  set hold;
 run;
-%mend bldout6;
+%if &dbg=0 %then %do;
+  proc datasets lib=work nolist; delete j1 hold; quit;
+%end;
+%mend est_aug;
 
-%bldout6(p=&dt);
+%est_aug(p=&dt);

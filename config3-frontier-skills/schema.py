@@ -166,4 +166,9 @@ Hard rules:
   permanent library, or the program's final result) -- not every intermediate/temp dataset.
 - If unsure of a value, use your best inference from the code rather than omitting the field,
   except "length": use null there if truly unknown.
+- Classify macro parameters by whether a default VALUE is present, not by whether `=`
+  appears in the SAS signature. A parameter written as `name=` with nothing after the `=`
+  (e.g. `%macro foo(p=, lb=work);` -- `p` has no default token, so it is required at call
+  time) goes in positional_params, even though it uses SAS keyword syntax. Only params with
+  an actual default value after the `=` (like `lb=work` above) go in keyword_params.
 """

@@ -1,63 +1,54 @@
 options nonotes;
-libname xin '/sasdata/arch/estab';
-%let dt=201607;
+libname xin '/prod/legacy/estab/in';
+%let dt=202009;
 
 data d1;
-  length ESTID $12 ST $2 PER $6 HIR 8 JO 8;
+  length ESTID $12 ST $2 PER $6 JO 8 SEP 8 RSPF $1;
   infile datalines dsd truncover;
-  input ESTID $ ST $ PER $ HIR JO;
+  input ESTID $ ST $ PER $ JO SEP RSPF $;
   datalines;
-  EST0001,01,201607,833.82,894.67
-  EST0002,06,201607,223.95,803.99
-  EST0003,02,201607,180.34,319.56
-  EST0004,11,201607,542.40,210.64
+  EST0001,01,202009,229.51,461.80,N
+  EST0002,06,202009,818.20,50.07,P
+  EST0003,02,202009,344.15,219.31,R
+  EST0004,11,202009,697.83,863.99,N
   ;
 run;
 
 data d2;
-  length ESTID $12 ST $2 WGTF 8 RSPF $1;
+  length ESTID $12 ST $2 EMPL 8 WGTF 8;
   infile datalines dsd truncover;
-  input ESTID $ ST $ WGTF RSPF $;
+  input ESTID $ ST $ EMPL WGTF;
   datalines;
-  EST0001,01,388.15,Y
-  EST0002,06,648.94,Y
-  EST0003,02,771.94,Y
-  EST0004,11,197.54,I
+  EST0001,01,405.23,904.66
+  EST0002,06,580.85,36.40
+  EST0003,02,720.65,552.83
+  EST0004,11,217.96,618.02
   ;
 run;
 
-%macro bldout9(p=, lb=work);
-proc sort data=d1 out=_sd1; by ESTID ST; run;
-proc sort data=d2 out=_sd2; by ESTID ST; run;
-data _t1;
-  merge _sd1(in=i1) _sd2(in=i2);
+%macro mkest(p=, lb=work, thr=5);
+proc sort data=d1 out=s_d1; by ESTID ST; run;
+proc sort data=d2 out=s_d2; by ESTID ST; run;
+
+data sel;
+  merge s_d1(in=i1) s_d2(in=i2);
   by ESTID ST;
   if i1;
-  if PER = '' then PER = "&dt";
+  if WGTF ge &thr;
+  if PER = '' then PER = "&p";
+  if EMPL > 0 then JOR = round(100*JO/EMPL, 0.01);
+  else JOR = .;
 run;
 
-proc transpose data=_t1 out=_x2 prefix=v;
-  by ESTID;
-  var HIR;
-run;
-data _t2; set _t1; run;
-
-data _t3;
-  set _t2;
-  if HIR > 0 then HIRR = round(100*HIR/HIR, 0.01);
-  else HIRR = .;
-run;
-
-proc summary data=_t3 nway;
+proc summary data=sel nway;
   class ST;
-  var HIR JO;
-  output out=agg1(drop=_type_ _freq_) mean=;
+  var JO SEP;
+  output out=agg1(drop=_type_ _freq_) sum=;
 run;
-data _t4; set _t3; run;
 
 data &lb..o1;
-  set _t4;
+  set sel;
 run;
-%mend bldout9;
+%mend mkest;
 
-%bldout9(p=&dt);
+%mkest(p=&dt);

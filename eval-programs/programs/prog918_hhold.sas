@@ -1,64 +1,54 @@
-options mlogic nomprint;
-libname xin '/sasdata/arch/hhold';
-%let dt=202009;
+options validvarname=v7;
+libname xin '/prod/legacy/hhold/in';
+%let dt=201807;
 
 data d1;
-  length HHID $10 RGN $1 IMTH $6 UHRS 8 NPER 8;
+  length HHID $10 RGN $1 IMTH $6 LFST $2 INCB $2;
   infile datalines dsd truncover;
-  input HHID $ RGN $ IMTH $ UHRS NPER;
+  input HHID $ RGN $ IMTH $ LFST $ INCB $;
   datalines;
-  HHI0001,0,202009,507.95,459.24
-  HHI0002,0,202009,586.79,854.66
-  HHI0003,0,202009,320.90,516.90
-  HHI0004,1,202009,418.35,591.63
+  HHI0001,0,201807,U,C
+  HHI0002,0,201807,I,B
+  HHI0003,0,201807,E,A
+  HHI0004,1,201807,N,D
   ;
 run;
 
 data d2;
-  length HHID $10 RGN $1 PRXF $1 LFST $2;
+  length HHID $10 RGN $1 NPER 8 PWGT 8 PRXF $1;
   infile datalines dsd truncover;
-  input HHID $ RGN $ PRXF $ LFST $;
+  input HHID $ RGN $ NPER PWGT PRXF $;
   datalines;
-  HHI0001,0,A,I
-  HHI0002,0,P,N
-  HHI0003,0,I,Y
-  HHI0004,1,P,R
+  HHI0001,0,571.87,449.73,N
+  HHI0002,0,90.11,892.36,Y
+  HHI0003,0,315.09,604.51,N
+  HHI0004,1,480.44,57.86,Y
   ;
 run;
 
-%macro runjob2(p=, lb=work, thr=5);
-proc sort data=d1 out=_sd1; by HHID RGN; run;
-proc sort data=d2 out=_sd2; by HHID RGN; run;
-data _t1;
-  merge _sd1(in=i1) _sd2(in=i2);
+%macro hh_run(p=, lb=work, thr=5);
+proc sort data=d1 out=s_d1; by HHID RGN; run;
+proc sort data=d2 out=s_d2; by HHID RGN; run;
+
+data sel;
+  merge s_d1(in=i1) s_d2(in=i2);
   by HHID RGN;
   if i1;
-  if UHRS ge &thr;
-  if IMTH = '' then IMTH = "&dt";
+  if NPER ge &thr;
+  if IMTH = '' then IMTH = "&p";
+  if NPER > 0 then PWGTR = round(100*PWGT/NPER, 0.01);
+  else PWGTR = .;
 run;
 
-proc summary data=_t1 nway;
+proc summary data=sel nway;
   class RGN;
-  var UHRS NPER;
+  var PWGT NPER;
   output out=agg1(drop=_type_ _freq_) mean=;
-run;
-data _t2; set _t1; run;
-
-proc transpose data=_t2 out=_x3 prefix=v;
-  by HHID;
-  var UHRS;
-run;
-data _t3; set _t2; run;
-
-data _t4;
-  set _t3;
-  if UHRS > 0 then UHRSR = round(100*UHRS/UHRS, 0.01);
-  else UHRSR = .;
 run;
 
 data &lb..o1;
-  set _t4;
+  set sel;
 run;
-%mend runjob2;
+%mend hh_run;
 
-%runjob2(p=&dt);
+%hh_run(p=&dt);

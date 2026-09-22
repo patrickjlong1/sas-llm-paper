@@ -55,6 +55,14 @@ Only needed for steps 1 (`sas_metadata.py`) and 6 (`push_to_oda.py`) of the
 skill -- the actual authoring step needs nothing beyond Claude reading the
 file.
 
+**Which interpreter runs those two steps.** On this box `saspy` lives in a
+separate venv (`/internal/venvs/main`) rather than in the notebook kernel,
+which is why the commands below name it explicitly. That path exists
+nowhere else, so the notebook detects it instead: it picks the venv when
+`import saspy` succeeds there and this notebook's own kernel otherwise.
+Off this box, just use whichever interpreter you ran the `pip install`
+with. Steps 2-5 and 7 need no saspy at all and run under any interpreter.
+
 ## 4. Setting up your SAS OnDemand for Academics (ODA) credentials
 
 This is the step config3 benefits from MOST -- it's what supplies the
@@ -76,21 +84,69 @@ being exercised -- do this step if you want a real config3 result.
    `iomhost` list -- already filled in for US-region/usw2. If your account
    is Europe or Asia Pacific, replace it (see config1's `SETUP.md` for the
    other two regions' host names, or find yours on your ODA dashboard).
-4. **Run the ground-truth harvest** (needs the venv with `saspy`):
+4. **Run the ground-truth harvest** (needs the interpreter with `saspy`):
    ```bash
    /internal/venvs/main/bin/python3 sas_metadata.py path/to/program.sas --out /tmp/column_metadata.json
    ```
-   No Java install needed -- a portable JRE is bundled at the repo root
-   (`../jre/`, shared by every config that talks to SAS) and
-   `config/sascfg_personal.py` points at it automatically.
+   `config/sascfg_personal.py` resolves `java` itself: the portable JRE
+   bundled at the repo root (`../jre/`, shared by every config that talks
+   to SAS) when it exists, otherwise whatever `java` is on `PATH`. `jre/`
+   is 136 MB and gitignored, so a fresh clone does not have it -- there,
+   install a JDK (`apt-get install default-jdk`, or your platform's
+   equivalent) and `PATH` resolution takes over. Do NOT hand-build a
+   `classpath` in that file: SAS's IOM protocol needs `org.omg.CORBA.*`,
+   which the JDK dropped in JEP 320, and saspy's own default classpath
+   already carries the back-port.
 5. **Push results** (after authoring + validating a dictionary, per the
    skill's steps 4-5):
    ```bash
    /internal/venvs/main/bin/python3 push_to_oda.py --catalog catalog/
    ```
+   `push_to_oda.py` mirrors whatever catalog you point it at into SAS, so
+   check what is in `catalog/` first. The catalog built before the
+   2026-09-21 rewrite of `../eval-programs/` has been moved aside to
+   `catalog-stale-2026-09-17/`; pushing that one would put documentation
+   for programs that no longer exist into `SASUSER` under the current
+   program names.
 
 **Licence note:** ODA is for academic/non-commercial use -- check current
 terms before pushing anything work-adjacent there.
+
+## 5. Scoring a config3 run
+
+After step 7 of the skill has written all 20 `.pred.json` files:
+
+```bash
+python3 ../results/run_eval.py --config config3-frontier-skills \
+    --pred-dir ../results/preds/config3-frontier-skills \
+    --out-prefix ../results/outputs/config3-frontier-skills
+python3 ../results/run_eval.py --table --rows ../results/rows.example.json
+```
+
+Two things config3 in particular has to get right here:
+
+- **`--elapsed-sec` must be measured.** `save_prediction.py` takes it
+  per program, and the 2026-09-17 run filled in a flat `90.0` for all 20.
+  The table now detects an identical-for-every-program time and prints it
+  as `(placeholder*)` instead of as a measurement.
+- **Cost is `not recorded`, not `$0`.** An interactive Claude Code session
+  has no metered per-call cost, so leaving `--cost-usd` off is correct and
+  the table says so. If you drive config3 through the Anthropic API,
+  record the real number from the response's usage fields -- the plan asks
+  for actual cost, not an estimate.
+
+Scoring writes a `.provenance.json` sidecar recording exactly which eval
+corpus was scored, and `--table` marks a row **STALE** rather than
+printing numbers that no longer describe the corpus on disk. Config3's own
+2026-09-17 run is why: it read `1.00` on every metric, while the same
+predictions scored against the current gold read `0.79` variable F1 and
+`0.00` macro F1. See `../results/outputs/stale-2026-09-17/README.md`.
+
+Per the plan, also score config3 **twice** -- once with the
+`sas_metadata.py` ground truth allowed as a hallucination-check source
+(`--extra-source-dir`), once without -- and report the pair, rather than a
+single number that silently includes the tool-access advantage.
+
 
 ## The asymmetry to report honestly
 

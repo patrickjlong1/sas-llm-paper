@@ -35,11 +35,36 @@
 # time instead of a clear "missing jar" error.
 
 import os
+import shutil
+
 import saspy
 
 _project_root = os.environ.get("SAS_DOC_GEN_PROJECT_ROOT") or \
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # config/ -> config1-gemma-cpu/ -> sas-doc-gen-project/ (jre/ is shared at the repo root)
+
+def _resolve_java():
+    """Prefer the portable JRE bundled at the repo root; fall back to whatever
+    `java` is on PATH.
+
+    `jre/` is 136 MB and gitignored, so it exists on the box it was unpacked
+    on and NOT in a fresh `git clone` -- which is exactly the situation on
+    Colab/Kaggle. Hard-coding the bundled path there produced a SASPy failure
+    at connect time pointing at a java binary that was never in the clone.
+    Colab/Kaggle sessions run as root and can `apt-get install default-jdk`
+    (see each config's SETUP.md), which puts a JRE 9+ on PATH; saspy's own
+    default classpath carries the CORBA back-port that JRE needs, so a
+    PATH java works there."""
+    bundled = os.path.join(_project_root, "jre", "bin", "java")
+    if os.path.exists(bundled):
+        return bundled
+    found = shutil.which("java")
+    if found:
+        return found
+    # Neither: report the bundled path anyway so the error names the thing
+    # this repo expects, and SETUP.md's install step is the obvious fix.
+    return bundled
+
 
 SAS_config_names = ["oda"]
 
@@ -58,7 +83,9 @@ oda = {
     ],
 
     # ---- already correct for this project -----------------------------------
-    "java": os.path.join(_project_root, "jre", "bin", "java"),
+    # bundled jre/ when present (this box), else a PATH java (Colab/Kaggle,
+    # where jre/ is gitignored and absent) -- see _resolve_java() above.
+    "java": _resolve_java(),
 
     # ---- leave the rest alone ----------------------------------------------
     "iomport": 8591,
