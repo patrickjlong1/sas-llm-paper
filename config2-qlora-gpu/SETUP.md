@@ -32,8 +32,9 @@ The notebook's first cell does this automatically when it detects Colab.
    account.
 2. New notebook -> Runtime -> Change runtime type -> Hardware accelerator:
    **T4 GPU** -> Save. Free tier gives you a T4 (16 GB VRAM) with usage
-   limits that reset over time; that's enough for a 1-4B model in 4-bit at
-   `--maxlen 2048`.
+   limits that reset over time. Note that this corpus needs `--maxlen 4096`
+   (section 4), not 2048, and no one has yet run the 4B at that length on a
+   free T4 end to end -- if it OOMs, an A100/L4 runtime is the fallback.
 3. Either open `config2_qlora_gpu.ipynb` from GitHub (File -> Open
    notebook -> GitHub) or `git clone` as in section 0. Mount Google Drive
    if you want the adapter output to persist across sessions -- Colab's
@@ -109,9 +110,30 @@ holdout would suggest -- report that gap as a finding rather than a bug.
 ```bash
 python3 qlora_finetune.py --train ../data/train.jsonl \
     --eval ../data/train_holdout.jsonl \
-    --model google/gemma-3-4b-it --maxlen 2048 --epochs 2 \
+    --model google/gemma-3-4b-it --maxlen 4096 --epochs 2 \
     --out ../adapters/sasdoc-lora
 ```
+
+**`--maxlen 4096` is the floor for this corpus, and it is load-bearing.**
+One training example is the schema block + a SAS program + its indented gold
+JSON, which measures ~2400-2800 tokens -- so *not one example* fits in 2048.
+Both halves of that have already bitten this repo:
+
+* Before the length filter was fixed it compared `len()` of a `BatchEncoding`
+  (i.e. `2`) against `maxlen` and so never fired, and every example trained
+  **truncated** at 2048 -- each target cut off mid-dictionary, exactly what
+  the filter existed to prevent. The 2026-09-21 adapter is from such a run.
+* With the filter working, `--maxlen 2048` dropped 579/580 training examples
+  and all 20 holdout examples, and the run died on
+  `StopIteration` in `trl/trainer/sft_trainer.py::_prepare_dataset`, which is
+  just `next(iter(dataset))` over the now-empty eval set.
+
+`qlora_finetune.py` now prints measured token `p50/p90/p99/max` for each
+split, exits with an explicit message (naming the `--maxlen` to use) if more
+than 20% of the training corpus does not fit, and passes `eval_dataset=None`
+with `eval_strategy="no"` rather than handing trl an empty dataset. Raise
+`--maxlen`, don't lower it: if it OOMs, drop
+`per_device_train_batch_size` or raise `gradient_accumulation_steps` instead.
 
 `google/gemma-3-4b-it` is Gemma weights on Hugging Face and is **gated** --
 you must (a) accept the license on the model's HF page while logged in, and
@@ -136,7 +158,9 @@ examples / effective batch 8 / 2 epochs), so **1.5-2.5 hours** -- the
 30-90 min in earlier drafts of this doc was optimistic. For
 `gemma-3-4b-it` (the current default) an adapter has been trained once,
 on 2026-09-21: `../adapters/sasdoc-lora/run_config.json` records
-`maxlen=2048, epochs=2, lr=2e-4, bf16=true`, and `bf16=true` comes from
+`maxlen=2048, epochs=2, lr=2e-4, bf16=true`. **That `maxlen=2048` means it
+was trained on truncated targets (see above) -- retrain it at `--maxlen 4096`
+before any of its scores go in the paper.** `bf16=true` comes from
 `torch.cuda.is_bf16_supported()`, which is False on a T4 -- so **that run
 was not on a free T4, and neither its GPU nor its wall clock was
 recorded**. There is still no T4 end-to-end number for the 4B. Record

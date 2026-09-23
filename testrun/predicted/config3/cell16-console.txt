@@ -1,9 +1,0 @@
-
-=== [1/1] prog900_estab ===
-catalog: catalog/ -> program_summary=1, macro_params=3, data_dictionary=12, column_metadata=39 (prog900_estab)
-no guardrail flags.
-wrote prog900_estab.pred.json and .meta.json to ../results/preds/config3-frontier-skills
-prog900_estab: 67.6s, $0.1200, 3 api turn(s), tools={'sas_column_metadata': 1, 'header_comments': 1, 'static_identifier_scan': 1}, ground truth=True
-
-1/1 documented
-measured cost: $0.1200 total, $0.1200 mean per program (1 priced)

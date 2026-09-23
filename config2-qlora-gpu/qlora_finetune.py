@@ -5,8 +5,7 @@ QLoRA fine-tune of the SAME base model config1 uses (Gemma), on the SAME
 prompt/output schema (schema.py) as every other config in this project --
 the plan's Config 2: "the model is trained on pairs of SAS programs and
 their documentation... does a modest training run close the gap to the
-frontier while staying air-gapped." Needs a GPU; a free Colab T4 is enough
-for a 1B-4B-class base at MAXLEN<=2048 -- see this folder's SETUP.md.
+frontier while staying air-gapped." Needs a GPU -- see this folder's SETUP.md.
 
 HARD CONSTRAINT (plan section 2): the 20 eval-programs/ programs must be
 held out of training entirely, or the scores are meaningless. This script's
@@ -21,37 +20,48 @@ Colab setup (run once, in a cell, before this script):
     !pip -q install "transformers>=4.44" "trl>=0.24" "peft>=0.12" \
                     "bitsandbytes>=0.43" "datasets>=2.20" "accelerate>=0.33"
 
-Hardware reality check (plan: report hardware honestly):
-  * free T4 (16 GB, no bf16, no flash-attn): gemma-3-1b-it in 4-bit at
-    MAXLEN=2048 works comfortably; ~30-90 min for 600 samples x 2 epochs
-    (observed ~50s/step, 150 steps -- see this folder's SETUP.md).
-  * gemma-3-4b-it (this project's current default, matching config1's
-    gemma3:4b) is expected to fit a free T4 in 4-bit at MAXLEN=2048 too --
-    4B params in nf4 is roughly 2-2.5 GB of weights plus LoRA/optimizer
-    state/activations, well inside 16 GB -- but this has NOT actually been
-    run end-to-end on a T4 yet in this repo; expect noticeably slower
-    steps than the 1B numbers above and budget accordingly. Report real
-    numbers here once you've run it.
-  * Colab Pro L4 / A100: MAXLEN=4096-8192, bf16, faster still.
-MAXLEN is the real constraint, not parameter count -- a real legacy program
-plus its documentation JSON must fit in one window.
+MAXLEN is the real constraint here, not parameter count: one training example
+is the schema block + a SAS program + its indented gold JSON, which measures
+~2400-2800 tokens for this corpus. MAXLEN=2048 therefore does not fit a
+SINGLE example, and the 2026-09-21 run in this repo hit both halves of that:
+  * with the old length filter (which compared len() of a BatchEncoding, i.e.
+    2, against maxlen and so never fired) everything trained TRUNCATED at
+    2048 -- every target cut off mid-dictionary, which is precisely what the
+    filter existed to prevent;
+  * with the filter fixed, the same maxlen=2048 dropped 579/580 training
+    examples and all 20 holdout examples, and the run died with a bare
+    StopIteration from inside trl's _prepare_dataset on the empty eval set.
+So: --maxlen 4096 is the floor for this corpus, and the script now prints the
+measured p50/p90/p99/max and refuses to start if >20% of the corpus does not
+fit. Do not lower it back to 2048 to save memory.
 
-What has actually been run: an adapter trained with these defaults exists at
-`../adapters/sasdoc-lora` (2026-09-21). Its `run_config.json` records
-`model=google/gemma-3-4b-it, maxlen=2048, epochs=2, lr=2e-4, bf16=true` --
-and `bf16=true` comes from `torch.cuda.is_bf16_supported()`, which is False
-on a T4, so that run was NOT on a free T4. Neither the GPU model nor the
-wall-clock time was recorded. Record both for the paper; the table's
-"cost per program" is inference only and does not include this.
+Hardware reality check (plan: report hardware honestly):
+  * A100 40 GB, gemma-3-4b-it in 4-bit at MAXLEN=4096, batch 1 x grad-accum 8
+    with gradient checkpointing: fits with room to spare.
+  * free T4 (16 GB, no bf16, no flash-attn): the 4B base in nf4 is only
+    ~2-2.5 GB of weights, but MAXLEN=4096 activations (not weights) are what
+    decides this, and it has NOT been run end-to-end on a T4 in this repo.
+    Verify before quoting a T4 number in the paper.
+  * Colab Pro L4 / A100: MAXLEN=4096-8192, bf16.
+
+What has actually been run: an adapter exists at `../adapters/sasdoc-lora`
+(2026-09-21), but its `run_config.json` records `maxlen=2048`, so it was
+trained on truncated targets per the first bullet above -- RETRAIN IT at
+--maxlen 4096 before using its scores for anything. `bf16=true` there comes
+from `torch.cuda.is_bf16_supported()`, which is False on a T4, so that run
+was not on a free T4; neither the GPU model nor the wall clock was recorded.
+Record both for the paper; the table's "cost per program" is inference only
+and does not include this.
 
 Run (note --eval is a TRAIN-time holdout, never eval-programs/ -- pointing
 --eval at the scoring set is exactly the leak this config must not have):
     python3 qlora_finetune.py --train ../data/train.jsonl \
         --eval ../data/train_holdout.jsonl \
-        --model google/gemma-3-4b-it --maxlen 2048 --epochs 2
+        --model google/gemma-3-4b-it --maxlen 4096 --epochs 2
 """
 
 import argparse
+import dataclasses
 import inspect
 import json
 import os
@@ -111,7 +121,10 @@ def main():
                          "accept the license on the model page and set HF_TOKEN first.")
     ap.add_argument("--revision", default="main",
                     help="PIN THIS to a commit sha for a reproducible paper")
-    ap.add_argument("--maxlen", type=int, default=2048)
+    ap.add_argument("--maxlen", type=int, default=4096,
+                    help="a schema block + one SAS program + its indented gold JSON is "
+                         "~2400-2800 tokens for this corpus, so 2048 drops essentially "
+                         "every example -- measured p50/p90/max are printed below")
     ap.add_argument("--epochs", type=float, default=2.0)
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--out", default="../adapters/sasdoc-lora")
@@ -147,22 +160,58 @@ def main():
 
     # Drop anything that will not fit -- silent truncation of the assistant turn
     # teaches the model to stop mid-dictionary, the single most common way this
-    # experiment fails.
-    def fits(rec):
+    # experiment fails. But a silent *drop* is worse than a loud one: at
+    # maxlen=2048 this filter threw away 579 of 580 training examples and all 20
+    # holdout examples, and the only symptom was a StopIteration from inside
+    # trl's _prepare_dataset on the empty eval set. So measure every example,
+    # print the distribution, and refuse to train on a corpus this has gutted.
+    def n_tokens(rec):
         # return_dict=True explicitly: newer transformers default to it anyway,
         # and a bare len() over the returned BatchEncoding counts keys (2), not
         # tokens, which silently disables this filter.
         enc = tok.apply_chat_template(to_chat(rec, tok)["messages"], tokenize=True,
                                       return_dict=True)
-        return len(enc["input_ids"]) <= args.maxlen
+        return len(enc["input_ids"])
 
-    kept = [r for r in train_recs if fits(r)]
-    print("train: kept %d / %d at maxlen=%d" % (len(kept), len(train_recs), args.maxlen))
+    def split_by_len(recs, name):
+        """Keep what fits, and always say what the lengths actually were --
+        'kept 1 / 580' is only actionable next to the number to raise --maxlen to."""
+        measured = [(r, n_tokens(r)) for r in recs]
+        kept = [r for r, n in measured if n <= args.maxlen]
+        lens = sorted(n for _, n in measured)
+        if lens:
+            pct = lambda q: lens[min(len(lens) - 1, int(q * len(lens)))]
+            print("%s: kept %d / %d at maxlen=%d (example tokens: p50=%d p90=%d "
+                  "p99=%d max=%d)" % (name, len(kept), len(recs), args.maxlen,
+                                      pct(0.5), pct(0.9), pct(0.99), lens[-1]))
+        return kept, lens
+
+    kept, train_lens = split_by_len(train_recs, "train")
+    eval_kept, _ = split_by_len(eval_recs, "eval")
+
+    # Round the longest example up to the next multiple of 512 -- the number to
+    # pass next run.
+    suggest = (max(train_lens or [args.maxlen]) + 511) // 512 * 512
+    if not kept:
+        raise SystemExit(
+            "FATAL: every one of the %d training examples is longer than --maxlen %d, "
+            "so there is nothing to train on -- one example is the schema block + a "
+            "SAS program + its indented gold JSON, which does not fit. Re-run with "
+            "--maxlen %d." % (len(train_recs), args.maxlen, suggest))
     if len(kept) < 0.8 * len(train_recs):
-        print("WARNING: >20%% dropped. Raise --maxlen or shorten the target JSON.")
+        raise SystemExit(
+            "FATAL: %d of %d training examples (%.0f%%) are longer than --maxlen %d. "
+            "Training on the short tail is not a fine-tune of this task -- it is a "
+            "fine-tune of whichever programs happened to be small. Re-run with "
+            "--maxlen %d, or shorten the target JSON."
+            % (len(train_recs) - len(kept), len(train_recs),
+               100.0 * (len(train_recs) - len(kept)) / len(train_recs), args.maxlen, suggest))
 
     ds_train = Dataset.from_list([to_chat(r, tok) for r in kept])
-    ds_eval = Dataset.from_list([to_chat(r, tok) for r in eval_recs if fits(r)])
+    ds_eval = Dataset.from_list([to_chat(r, tok) for r in eval_kept]) if eval_kept else None
+    if ds_eval is None:
+        print("WARNING: no --eval example fits maxlen=%d -- training with eval "
+              "disabled. There will be no eval-loss curve for the paper." % args.maxlen)
 
     bnb = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -202,7 +251,7 @@ def main():
         lr_scheduler_type="cosine",
         warmup_ratio=0.03,
         logging_steps=10,
-        eval_strategy="epoch",
+        eval_strategy="epoch" if ds_eval is not None else "no",
         save_strategy="epoch",
         bf16=bf16_ok,
         fp16=not bf16_ok,
@@ -213,13 +262,26 @@ def main():
     # requirements.txt only pins a floor (trl>=0.24) -- the resolved trl's
     # SFTConfig field names can drift out from under this script. Filter
     # against the live signature instead of crashing on a kwarg it dropped.
-    accepted = inspect.signature(SFTConfig.__init__).parameters
+    accepted = set(inspect.signature(SFTConfig.__init__).parameters)
+    accepted |= {f.name for f in dataclasses.fields(SFTConfig)}  # dataclass w/ custom __init__
+    if "warmup_ratio" not in accepted and "warmup_steps" in accepted:
+        # Don't silently train without warmup because the field was renamed --
+        # a 2e-4 LoRA LR with no warmup spikes the loss on the first steps.
+        total = -(-len(ds_train) // (targs_kwargs["per_device_train_batch_size"]
+                                     * targs_kwargs["gradient_accumulation_steps"]))
+        total = int(total * args.epochs)
+        targs_kwargs["warmup_steps"] = max(1, round(targs_kwargs.pop("warmup_ratio") * total))
+        print("NOTE: this trl's SFTConfig has no warmup_ratio -- using warmup_steps=%d "
+              "(3%% of %d steps) instead" % (targs_kwargs["warmup_steps"], total))
     dropped = {k: v for k, v in targs_kwargs.items() if k not in accepted}
     if dropped:
         print("WARNING: this trl's SFTConfig does not accept: %s -- using its defaults for them"
               % ", ".join(dropped))
     targs = SFTConfig(**{k: v for k, v in targs_kwargs.items() if k in accepted})
 
+    # eval_dataset=None, never an empty Dataset: trl's _prepare_dataset does
+    # next(iter(dataset)) to sniff the column layout, so an empty one comes back
+    # as a bare StopIteration with nothing naming the dataset that was empty.
     trainer = SFTTrainer(
         model=model, args=targs, processing_class=tok,
         train_dataset=ds_train, eval_dataset=ds_eval,
@@ -231,7 +293,12 @@ def main():
     tok.save_pretrained(args.out)
 
     with open(os.path.join(args.out, "run_config.json"), "w") as fh:
-        json.dump({**vars(args), "bf16": bf16_ok}, fh, indent=2)
+        json.dump({**vars(args), "bf16": bf16_ok,
+                   "train_examples_used": len(ds_train),
+                   "train_examples_total": len(train_recs),
+                   "eval_examples_used": len(ds_eval) if ds_eval is not None else 0,
+                   "train_tokens_p50": train_lens[len(train_lens) // 2],
+                   "train_tokens_max": train_lens[-1]}, fh, indent=2)
 
     if args.push:
         trainer.model.push_to_hub(args.push)

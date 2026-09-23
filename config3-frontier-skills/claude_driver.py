@@ -8,15 +8,20 @@ dictionary JSON (`schema.py`'s shape). This is the script SETUP.md used to
 leave as a stub, and it is what makes config3 runnable unattended -- over
 all 20 eval programs in one command.
 
-Run it on THIS box, with the interpreter that already has saspy:
+Run it with an interpreter that has `anthropic`, and -- for the SAS
+ground-truth tool only -- one that can also import `saspy`. On this box
+that is the same venv for both:
 
     /internal/venvs/main/bin/python3 claude_driver.py ...
 
-Config3 needs no local compute (the model is remote), but it does need a
-live SASPy/ODA connection and Java for it -- both already provisioned here
-(`../jre/`, `~/.authinfo`, saspy in that venv) and neither of which
-survives a Colab runtime recycle. Colab is for config1/config2, which need
-free CPU/GPU for local weights.
+Config3 needs no local compute (the model is remote), so it runs anywhere
+with a network connection and an API key, Colab included; the notebook
+handles the Colab bootstrap. What it needs for the FULL config is a live
+SASPy/ODA connection and Java for it (`../jre/`, `~/.authinfo`, saspy),
+already provisioned here. Without those, `--no-sas-tool` is the honest
+run: same model and prompt, no ground truth -- the plan's fairer isolate,
+and a different results row. Colab is where config1/config2 want to be,
+for free CPU/GPU; config3 just needs somewhere to stand.
 
 What stays the same as the interactive path (deliberately, so the results
 row still describes the same config):

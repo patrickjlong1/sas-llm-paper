@@ -1,2 +1,0 @@
-[config3-frontier-skills-nogt] wrote config3-frontier-skills-nogt.scores.jsonl (20 programs)
-[config3-frontier-skills-nogt] wrote config3-frontier-skills-nogt.provenance.json (corpus gold_digest=f27fb0130faf)

@@ -6,9 +6,33 @@ own generation logic lives here. Implements the plan's section 3
 
 ## Current state of the numbers (read this first)
 
-**There are no current results in this repo.** `outputs/` holds only
-`difficulty.json` and a quarantine folder:
+**Config 2 has current numbers; configs 1 and 3 do not.**
 
+- `outputs/config2-base.scores.jsonl` and
+  `outputs/config2-tuned.scores.jsonl` -- scored 2026-09-23 from a Colab
+  A100-SXM4-40GB run of `config2-qlora-gpu/config2_qlora_gpu.ipynb` (the
+  executed copy of that notebook is committed alongside the script, so the
+  console output behind these numbers is readable). Both pass
+  `provenance.py --check` against the corpus currently on disk
+  (`gold_digest f27fb0130faf`). Predictions are in `preds/config2-base/`
+  and `preds/config2-tuned/` (local only; `preds/` is gitignored).
+  Caveats that belong next to these numbers:
+  - **1 run each**, where PLAN.md asks for 3 -- the CIs reflect program
+    difficulty only, not model variance.
+  - **Description score is `not run`**: the LLM judge needs Ollama, which
+    Colab does not have. Run `llm_judge.py` on a box that does.
+  - The tuned row used `adapters/sasdoc-lora` as trained on 2026-09-21,
+    i.e. `maxlen=2048`, which truncated every training target mid-JSON
+    (see `config2-qlora-gpu/SETUP.md`). It still scores near ceiling, but
+    a retrain at `--maxlen 4096` is the honest version of this row.
+  - The eval programs are *not* the same templates as the training
+    corpus: since 2026-09-21 `eval-programs/` is hand-rewritten with
+    different macros, parameter names and join idioms (see
+    `../eval-programs/README.md`), so config2 is tested out-of-template,
+    not merely out-of-sample. That makes the tuned row a stronger result
+    than a same-generator score would be -- say so, and say that the
+    programs are still synthetic, so it is not yet a claim about real
+    legacy SAS.
 - `outputs/stale-2026-09-17/` -- config1's and config3's scores from
   2026-09-17, which were computed against the eval corpus as it stood
   *before* `eval-programs/` was rewritten by hand on 2026-09-21. They are
@@ -17,13 +41,10 @@ own generation logic lives here. Implements the plan's section 3
   numbers moved.
 - `preds/stale-2026-09-17/` -- the predictions those scores came from
   (local only; `preds/` is gitignored).
-- config2 has never been scored at all: the QLoRA adapter exists
-  (`adapters/sasdoc-lora/`, trained 2026-09-21 on `google/gemma-3-4b-it`)
-  but `infer.py` has not been run against the current eval set.
 
-To produce real numbers, run each config's notebook against the current
-`eval-programs/` and score it (steps below). `provenance.py --check` tells
-you whether a given `.scores.jsonl` is current.
+Configs 1 and 3 still need re-running against the current
+`eval-programs/` (steps below). `provenance.py --check` tells you whether
+a given `.scores.jsonl` is current.
 
 ## Pipeline
 

@@ -1,7 +1,0 @@
-{
-  "model": "claude-opus-5",
-  "elapsed_sec": 38.69,
-  "cost_usd": 0.085195,
-  "used_ground_truth": false,
-  "hardware": "n/a (frontier model, no local compute)"
-}

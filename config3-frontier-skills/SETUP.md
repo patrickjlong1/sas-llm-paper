@@ -71,13 +71,34 @@ $PY claude_driver.py --dir ../eval-programs/programs --no-sas-tool \
     --preds-out ../results/preds/config3-frontier-skills-nogt
 ```
 
-**Running it in Colab instead is possible but pointless:** you would
-reinstall saspy, `apt-get install default-jdk` (the repo's `jre/` is 136 MB
-and gitignored, so a fresh clone lacks it), re-enter the ODA credentials
-from the Secrets panel, and zip the outputs off before the runtime
-recycles -- in exchange for free compute this config never uses. Colab is
-for `config1-gemma-cpu/` (free CPU) and `config2-qlora-gpu/` (free T4).
-The notebook's last section lists what to change if you must.
+**Running it in Colab:** `config3_frontier_skills.ipynb` runs there as
+well as locally -- open it from GitHub (File -> Open notebook -> GitHub)
+and run top to bottom. Its Setup 0 clones the whole repo (the sibling
+`../eval-programs/` and `../results/` are required), Setup 1 installs the
+SDK, and Setup 2 reads your API key from the **Secrets** panel (key icon,
+left sidebar) under the name `ANTHROPIC_API_KEY`, falling back to a
+`getpass` prompt. Nothing about config3 needs a GPU -- Colab is just a
+place to stand, unlike `config1-gemma-cpu/` (free CPU) and
+`config2-qlora-gpu/` (free T4), which want it for the hardware.
+
+Two things differ there and the notebook handles both:
+
+* **SAS ground truth is optional.** With `ODA_USER`/`ODA_PASS` also in
+  Secrets, the notebook writes `~/.authinfo`, `apt-get`s a JDK for
+  SASPy's IOM connection (the repo's `jre/` is 136 MB and gitignored, so
+  a fresh clone lacks it) and runs full config3. Without them it sets
+  `--no-sas-tool` and routes the predictions to
+  `preds/config3-frontier-skills-nogt`, so a run that never had ground
+  truth can't end up in the tool-access row.
+* **Outputs are ephemeral.** `/content/` is wiped when the runtime
+  recycles, and those files are the run -- recreating them costs the API
+  spend again. The notebook's download section zips `claude-runs*/`,
+  `catalog/`, `../results/preds/` and `../results/outputs/` and pulls
+  them down.
+
+The notebook also prints a **measured** cost for the first program and
+projects it across 20 before the full-run cell, so nobody discovers the
+bill afterwards.
 
 Model is `claude-opus-5` by default (`--model` to change it), with
 `output_config.effort` at `high` (`--effort low|medium|high|xhigh|max`).
